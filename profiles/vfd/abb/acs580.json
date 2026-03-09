@@ -5,67 +5,126 @@
   "protocol": "modbus_rtu",
   "baud_rate": 9600,
   "byte_order": "big_endian",
-  "notes": "ABB Standard Modbus register map. Address configurable via keypad (Par 54.01). Default 8N1.",
+  "notes": "ABB ACS580 series drive with Elektronikon controller. 16-bit register access: Modbus register = 40000 + parameter number (e.g., param 01.06 → reg 40106). Wire address = register - 40001. Motor speed and frequency return 0-20000 scaled values — multiply by nameplate/20000. Motor current resolution depends on par 46.05 (default=10000 → whole amps; set 46.05=100 for 0.01A on drives ≤65A). Also supports 32-bit access: register = 420000 + (200×group) + (2×index), requires par 58.33=0 (default). Source: ABB Technical Note 062 (LVD-EOTKN062U-EN REV A, 2021-06-22).",
+  "address_note": "Wire address = Modbus register - 40001. E.g., register 40106 → wire address 105. Configure Modbus slave address via par 54.01.",
+  "configuration_notes": "For best resolution: set par 46.01 = motor nameplate RPM, par 46.02 = motor nameplate Hz, par 46.05 = 100 (for drives ≤65A) or 1000 (for drives >65A). This ensures speed/frequency/current return values with proper scaling.",
   "registers": [
     {
-      "reg": 1,
-      "data_type": "float32",
-      "measurement_type": "motor_current",
-      "unit": "A",
-      "description": "Output current RMS",
-      "deadband": 0.5
-    },
-    {
-      "reg": 3,
-      "data_type": "uint16",
-      "measurement_type": "frequency",
-      "unit": "Hz",
-      "scale": 0.1,
-      "description": "Output frequency",
-      "deadband": 0.5
-    },
-    {
-      "reg": 5,
+      "reg": 100,
       "data_type": "uint16",
       "measurement_type": "motor_speed",
       "unit": "rpm",
-      "description": "Motor speed (estimated or encoder)",
+      "scale": 0.09,
+      "description": "Par 01.01 — Motor Speed Used. Returns 0-20000. Scale = nameplate_rpm / 20000. Default nameplate = 1800 rpm → scale 0.09. Adjust scale for actual motor.",
       "deadband": 10
     },
     {
-      "reg": 7,
+      "reg": 105,
       "data_type": "uint16",
-      "measurement_type": "voltage",
+      "measurement_type": "frequency",
+      "unit": "Hz",
+      "scale": 0.003,
+      "description": "Par 01.06 — Output Frequency. Returns 0-20000. Scale = nameplate_Hz / 20000. Default 60 Hz → scale 0.003. Adjust for 50 Hz motors (scale = 0.0025).",
+      "deadband": 0.5
+    },
+    {
+      "reg": 106,
+      "data_type": "uint16",
+      "measurement_type": "motor_current",
+      "unit": "A",
+      "scale": 1.0,
+      "description": "Par 01.07 — Motor Current. Default resolution: 1A whole number (par 46.05=10000). If par 46.05=100: scale=0.01. If par 46.05=1000: scale=0.1.",
+      "deadband": 0.5
+    },
+    {
+      "reg": 109,
+      "data_type": "uint16",
+      "measurement_type": "torque",
+      "unit": "%",
+      "scale": 0.01,
+      "description": "Par 01.10 — Motor Torque (% of nominal). Resolution 0.01%.",
+      "deadband": 2
+    },
+    {
+      "reg": 110,
+      "data_type": "uint16",
+      "measurement_type": "dc_bus_voltage",
       "unit": "V",
-      "description": "DC bus voltage",
+      "scale": 0.1,
+      "description": "Par 01.11 — DC Bus Voltage (0.1 VDC).",
       "deadband": 5
     },
     {
-      "reg": 9,
-      "data_type": "float32",
+      "reg": 112,
+      "data_type": "uint16",
+      "measurement_type": "voltage",
+      "unit": "V",
+      "scale": 1.0,
+      "description": "Par 01.13 — Output Voltage (1V resolution).",
+      "deadband": 5
+    },
+    {
+      "reg": 113,
+      "data_type": "uint16",
       "measurement_type": "power",
       "unit": "kW",
-      "description": "Output power",
+      "scale": 0.1,
+      "description": "Par 01.14 — Output Power (0.1 kW).",
       "deadband": 0.2
     },
     {
-      "reg": 10,
-      "data_type": "int16",
-      "measurement_type": "vfd_temperature",
-      "unit": "°C",
+      "reg": 119,
+      "data_type": "uint16",
+      "measurement_type": "energy",
+      "unit": "kWh",
       "scale": 0.1,
-      "description": "Heatsink temperature",
-      "deadband": 1,
+      "description": "Par 01.20 — Inverter kWh Counter (0.1 kWh). Accumulated energy consumption.",
+      "deadband": 1
+    },
+    {
+      "reg": 502,
+      "data_type": "uint16",
+      "measurement_type": "run_hours",
+      "unit": "h",
+      "description": "Par 05.03 — Hours Run (whole hours).",
+      "deadband": 1
+    },
+    {
+      "reg": 510,
+      "data_type": "uint16",
+      "measurement_type": "inverter_temperature",
+      "unit": "%",
+      "scale": 1.0,
+      "description": "Par 05.11 — Inverter Temperature (% of overtemp threshold). 100% = overtemp fault. NOT in °C — ABB only exposes percentage.",
+      "deadband": 2,
       "threshold_high": 85,
       "severity": "high"
     },
     {
-      "reg": 13,
-      "data_type": "float32",
-      "measurement_type": "torque",
-      "unit": "%",
-      "description": "Motor torque (% nominal)",
-      "deadband": 2
+      "reg": 615,
+      "data_type": "bitfield",
+      "measurement_type": "drive_status",
+      "unit": "bitfield",
+      "description": "Par 06.16 — Drive Status Word 1. Bit8=local, Bit10=Ext1, Bit11=Ext2. Contains run/stop/fault/warning bits.",
+      "deadband": 0
+    },
+    {
+      "reg": 439,
+      "data_type": "bitfield",
+      "measurement_type": "event_word",
+      "unit": "bitfield",
+      "description": "Par 04.40 — Event Word 1 (faults + warnings). Bits configurable via par 04.41-04.71. Configure in drive to expose relevant faults for your application.",
+      "deadband": 0,
+      "severity": "critical"
+    },
+    {
+      "reg": 410,
+      "data_type": "uint16",
+      "measurement_type": "last_fault",
+      "unit": "code",
+      "description": "Par 04.11 — Last Fault Code. Convert to hex and compare with ABB fault list. 0 = no fault.",
+      "deadband": 0,
+      "severity": "critical"
     }
   ]
 }

@@ -1,66 +1,195 @@
 {
-  "device": "Atlas Copco GA55",
+  "device": "Atlas Copco GA55 (Elektronikon MkIV)",
   "manufacturer": "Atlas Copco",
   "category": "compressor",
   "protocol": "modbus_rtu",
   "baud_rate": 9600,
   "byte_order": "big_endian",
-  "notes": "Atlas Copco Elektronikon controller. Register map from MK5 gateway documentation. Baud/parity configurable via controller menu.",
+  "notes": "Atlas Copco GA55 oil-injected screw compressor with Elektronikon MkIV controller. Modbus via Combox-S gateway (RS485 proxy to CAN network). Addresses are decimal. Analogue inputs are paired: odd=status, even=value. Counters are 32-bit (2×16-bit registers, big-endian). The actual sensor-to-register mapping depends on compressor configuration (features/options) — use AC FDP tool to verify input assignments for your specific machine. This profile uses the TYPICAL GA55 sensor layout. Source: 9820 3582 02, Edition 12 (2012).",
+  "address_note": "Register addresses are 0-based (as documented). FC03 for holding registers, FC01 for coils. The Combox-S proxy maps CAN node IDs to Modbus slave addresses — configure via FDP tool.",
   "registers": [
+    {"_section": "=== ANALOGUE INPUTS (status + value pairs) ==="},
+
     {
-      "reg": 100,
+      "reg": 2,
       "data_type": "int16",
       "measurement_type": "pressure",
       "unit": "bar",
-      "scale": 0.1,
-      "description": "Discharge pressure",
-      "deadband": 0.2,
-      "threshold_high": 10.0,
-      "severity": "high"
-    },
-    {
-      "reg": 102,
-      "data_type": "int16",
-      "measurement_type": "temperature",
-      "unit": "°C",
-      "scale": 0.1,
-      "description": "Discharge temperature",
-      "deadband": 2,
-      "threshold_high": 105,
+      "scale": 0.001,
+      "description": "Analogue Input 1 — Value. Typical GA55: Discharge pressure (mbar). 0x7FFF = sensor error.",
+      "deadband": 0.1,
+      "threshold_high": 11.0,
       "severity": "critical"
     },
     {
-      "reg": 104,
-      "data_type": "uint16",
+      "reg": 1,
+      "data_type": "bitfield",
+      "measurement_type": "pressure_status",
+      "unit": "bitfield",
+      "description": "Analogue Input 1 — Status. Bit0=pre-warning, Bit1=warning, Bit2=shutdown-warning, Bit3=shutdown, Bit4=service, Bit5=permissive-start, Bit6=sensor-error, Bit7=input-set.",
+      "deadband": 0
+    },
+    {
+      "reg": 4,
+      "data_type": "int16",
+      "measurement_type": "temperature",
+      "unit": "C",
+      "scale": 0.1,
+      "description": "Analogue Input 2 — Value. Typical GA55: Element outlet temperature (0.1°C). 0x7FFF = sensor error.",
+      "deadband": 2.0,
+      "threshold_high": 110.0,
+      "severity": "critical"
+    },
+    {
+      "reg": 6,
+      "data_type": "int16",
+      "measurement_type": "temperature_oil",
+      "unit": "C",
+      "scale": 0.1,
+      "description": "Analogue Input 3 — Value. Typical GA55: Oil injection temperature (0.1°C).",
+      "deadband": 2.0,
+      "threshold_high": 95.0,
+      "severity": "high"
+    },
+    {
+      "reg": 8,
+      "data_type": "int16",
       "measurement_type": "motor_current",
       "unit": "A",
       "scale": 0.1,
-      "description": "Motor current",
-      "deadband": 1
+      "description": "Analogue Input 4 — Value. Typical GA55: Motor current (0.1A). 0x7FFF = sensor error.",
+      "deadband": 1.0
     },
     {
-      "reg": 106,
+      "reg": 10,
+      "data_type": "int16",
+      "measurement_type": "pressure_oil",
+      "unit": "bar",
+      "scale": 0.001,
+      "description": "Analogue Input 5 — Value. Typical GA55: Oil pressure differential (mbar).",
+      "deadband": 0.1,
+      "threshold_low": 1.0,
+      "severity": "high"
+    },
+
+    {"_section": "=== SYSTEM STATUS (holding registers) ==="},
+
+    {
+      "reg": 401,
+      "data_type": "uint16",
+      "measurement_type": "compressor_state",
+      "unit": "enum",
+      "description": "CMS (high byte: Compressor Mechanical State) + COM (low byte). CMS: 01=stopped, 02=unloaded, 04=loaded. Low byte = communication state.",
+      "deadband": 0
+    },
+    {
+      "reg": 402,
+      "data_type": "uint16",
+      "measurement_type": "controller_mode",
+      "unit": "enum",
+      "description": "CS (high byte: Compressor Status state number) + CCM (low byte: Controller Mode). CCM: 00=local, 01=remote-digital, 02=remote-comms.",
+      "deadband": 0
+    },
+    {
+      "reg": 403,
+      "data_type": "bitfield",
+      "measurement_type": "general_status",
+      "unit": "bitfield",
+      "description": "General Status bitfield. Bit0=pre-warning, Bit1=general-warning, Bit2=shutdown-warning, Bit3=general-shutdown, Bit4=general-service, Bit5=start-failure, Bit6=emergency-stop, Bit7=manual/auto, Bit8=local/remote, Bit9=timer-active, Bit10=pre-warn-service-hours, Bit11=pre-warn-service-m3.",
+      "deadband": 0,
+      "severity": "critical"
+    },
+
+    {"_section": "=== COUNTERS (32-bit, 2 registers each) ==="},
+
+    {
+      "reg": 301,
       "data_type": "uint32",
       "measurement_type": "run_hours",
-      "unit": "h",
-      "description": "Total running hours",
+      "unit": "s",
+      "scale": 0.000277778,
+      "description": "Running Hours counter (in seconds, scale converts to hours). 32-bit: reg 301 (high) + reg 302 (low).",
       "deadband": 1
     },
     {
-      "reg": 108,
+      "reg": 303,
       "data_type": "uint32",
       "measurement_type": "load_hours",
-      "unit": "h",
-      "description": "Total loaded hours",
+      "unit": "s",
+      "scale": 0.000277778,
+      "description": "Loaded Hours counter (seconds → hours). Load% = loaded_hours / running_hours × 100.",
       "deadband": 1
     },
     {
-      "reg": 110,
+      "reg": 305,
+      "data_type": "uint32",
+      "measurement_type": "motor_starts",
+      "unit": "count",
+      "description": "Motor Starts counter. High start count = excessive cycling (check pressure band or system sizing).",
+      "deadband": 1
+    },
+    {
+      "reg": 309,
+      "data_type": "uint32",
+      "measurement_type": "accumulated_volume",
+      "unit": "m3",
+      "description": "Accumulated compressed air volume. Use with load_hours for specific power (kW/m³).",
+      "deadband": 10
+    },
+
+    {"_section": "=== VSD MOTOR DATA (if VSD model) ==="},
+
+    {
+      "reg": 801,
       "data_type": "uint16",
-      "measurement_type": "status_word",
-      "unit": "bitfield",
-      "description": "Compressor status (bit 0=running, bit 1=loaded, bit 2=alarm, bit 3=fault)",
-      "deadband": 0
+      "measurement_type": "speed_setpoint",
+      "unit": "rpm",
+      "description": "Required motor speed (VSD setpoint). Only on VSD models (GA55 VSD).",
+      "deadband": 10,
+      "models": ["GA55_VSD", "GA75_VSD", "GA90_VSD"]
+    },
+    {
+      "reg": 802,
+      "data_type": "uint16",
+      "measurement_type": "motor_speed",
+      "unit": "rpm",
+      "description": "Actual motor speed motor 1. Only on VSD models. Compare with setpoint for regulation quality.",
+      "deadband": 10,
+      "models": ["GA55_VSD", "GA75_VSD", "GA90_VSD"]
+    },
+
+    {"_section": "=== PRESSURE BAND (read/write) ==="},
+
+    {
+      "reg": 1062,
+      "data_type": "int16",
+      "measurement_type": "pressure_load",
+      "unit": "bar",
+      "scale": 0.001,
+      "description": "Loading pressure band 1 (mbar). Compressor loads when network pressure drops to this value.",
+      "deadband": 0.05
+    },
+    {
+      "reg": 1063,
+      "data_type": "int16",
+      "measurement_type": "pressure_unload",
+      "unit": "bar",
+      "scale": 0.001,
+      "description": "Unloading pressure band 1 (mbar). Compressor unloads when network pressure reaches this value.",
+      "deadband": 0.05
+    },
+
+    {"_section": "=== COILS (Function 01 — General Condition) ==="},
+    {"_note": "Coils require FC01 (read coil status), not FC03. The runtime needs FC01 support (roadmap v0.2) to read these. Listed here for documentation."},
+    {
+      "reg": 1,
+      "data_type": "bitfield",
+      "function": "input_registers",
+      "measurement_type": "_coil_running",
+      "unit": "bool",
+      "description": "COIL 0001: Running (0=stopped, 1=running). NOTE: Requires FC01 support (not yet implemented). Use general_status register 403 instead.",
+      "deadband": 0,
+      "_status": "deferred_fc01"
     }
   ]
 }

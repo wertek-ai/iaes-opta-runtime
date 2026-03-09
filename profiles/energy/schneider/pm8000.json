@@ -1,0 +1,268 @@
+{
+  "device": "Schneider PowerLogic PM8000",
+  "manufacturer": "Schneider Electric",
+  "category": "energy_meter",
+  "protocol": "modbus_tcp",
+  "tcp_port": 502,
+  "byte_order": "big_endian",
+  "notes": "Schneider PowerLogic PM8000 series power quality meter. All real-time measurement registers use native IEEE 754 FLOAT32 (2 registers each). Energy accumulators available as both FLOAT32 (reg 2700+) and INT64 (reg 3200+). THD available at two register ranges: real-time (21300+) and 10-minute aggregated (39401+ / 40028+). The PM8000 is the modern successor to the ION series — much cleaner Modbus map with no proprietary encoding (unlike ION 8650 INT32-M10K). Source: PM8000_Modbus_Map.xlsx Release 1.",
+  "address_note": "Register addresses are 0-based as documented. No offset needed.",
+  "codigo_de_red_notes": "This meter covers ALL Codigo de Red (CRE RES/550/2021) parameters: FP cinco-minutal (≥0.97 after Apr 2026), THD voltage/current (IEEE-519), voltage ±5%, frequency 59-61Hz, desbalance V/I (≤2%/≤15%). With the Opta polling every 5 min, generates the 8,640 monthly records CdR demands.",
+  "registers": [
+    {
+      "reg": 3000,
+      "data_type": "float32",
+      "measurement_type": "current_l1",
+      "unit": "A",
+      "description": "Current Phase A",
+      "deadband": 0.5
+    },
+    {
+      "reg": 3002,
+      "data_type": "float32",
+      "measurement_type": "current_l2",
+      "unit": "A",
+      "description": "Current Phase B",
+      "deadband": 0.5
+    },
+    {
+      "reg": 3004,
+      "data_type": "float32",
+      "measurement_type": "current_l3",
+      "unit": "A",
+      "description": "Current Phase C",
+      "deadband": 0.5
+    },
+    {
+      "reg": 3010,
+      "data_type": "float32",
+      "measurement_type": "current",
+      "unit": "A",
+      "description": "Current Average (3-phase)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 3018,
+      "data_type": "float32",
+      "measurement_type": "current_unbalance",
+      "unit": "%",
+      "description": "Current Unbalance Worst. CdR limit: ≤15%.",
+      "deadband": 0.5,
+      "threshold_high": 15.0,
+      "severity": "medium"
+    },
+    {
+      "reg": 3028,
+      "data_type": "float32",
+      "measurement_type": "voltage_l1",
+      "unit": "V",
+      "description": "Voltage A-N (phase-neutral)",
+      "deadband": 1
+    },
+    {
+      "reg": 3030,
+      "data_type": "float32",
+      "measurement_type": "voltage_l2",
+      "unit": "V",
+      "description": "Voltage B-N (phase-neutral)",
+      "deadband": 1
+    },
+    {
+      "reg": 3032,
+      "data_type": "float32",
+      "measurement_type": "voltage_l3",
+      "unit": "V",
+      "description": "Voltage C-N (phase-neutral)",
+      "deadband": 1
+    },
+    {
+      "reg": 3036,
+      "data_type": "float32",
+      "measurement_type": "voltage",
+      "unit": "V",
+      "description": "Voltage L-N Average. CdR: permanent ±5% Vnom.",
+      "deadband": 1
+    },
+    {
+      "reg": 3052,
+      "data_type": "float32",
+      "measurement_type": "voltage_unbalance",
+      "unit": "%",
+      "description": "Voltage Unbalance L-N Worst. CdR limit: ≤2%.",
+      "deadband": 0.2,
+      "threshold_high": 2.0,
+      "severity": "high"
+    },
+    {
+      "reg": 3060,
+      "data_type": "float32",
+      "measurement_type": "power",
+      "unit": "W",
+      "description": "Active Power Total (Watts). Positive = delivered (into load).",
+      "deadband": 100
+    },
+    {
+      "reg": 3068,
+      "data_type": "float32",
+      "measurement_type": "reactive_power",
+      "unit": "VAR",
+      "description": "Reactive Power Total. Positive = lagging (inductive). CdR compliance depends on keeping this low relative to active power.",
+      "deadband": 100
+    },
+    {
+      "reg": 3076,
+      "data_type": "float32",
+      "measurement_type": "apparent_power",
+      "unit": "VA",
+      "description": "Apparent Power Total",
+      "deadband": 100
+    },
+    {
+      "reg": 3110,
+      "data_type": "float32",
+      "measurement_type": "frequency",
+      "unit": "Hz",
+      "description": "Line Frequency. CdR: permanent 59-61 Hz, 30-min 58-62.5 Hz.",
+      "deadband": 0.02,
+      "threshold_low": 59.0,
+      "threshold_high": 61.0,
+      "severity": "critical"
+    },
+    {
+      "reg": 3150,
+      "data_type": "float32",
+      "measurement_type": "power_factor",
+      "unit": "ratio",
+      "description": "Power Factor Total (true PF, includes harmonics). CdR: ≥0.95 until Apr 2026, ≥0.97 after. Must comply 95% of 8,640 monthly 5-min records.",
+      "deadband": 0.005,
+      "threshold_low": 0.95,
+      "severity": "high"
+    },
+    {
+      "reg": 3158,
+      "data_type": "float32",
+      "measurement_type": "displacement_power_factor",
+      "unit": "ratio",
+      "description": "Displacement Power Factor Total (fundamental only, excludes harmonics). Compare with true PF to isolate harmonic impact on power factor.",
+      "deadband": 0.005
+    },
+    {
+      "reg": 2700,
+      "data_type": "float32",
+      "measurement_type": "energy_delivered",
+      "unit": "kWh",
+      "description": "Active Energy Delivered (Into Load). FLOAT32 accumulator.",
+      "deadband": 10
+    },
+    {
+      "reg": 2702,
+      "data_type": "float32",
+      "measurement_type": "energy_received",
+      "unit": "kWh",
+      "description": "Active Energy Received (Out of Load). For generation/regeneration tracking.",
+      "deadband": 10
+    },
+    {
+      "reg": 2708,
+      "data_type": "float32",
+      "measurement_type": "reactive_energy_delivered",
+      "unit": "kVARh",
+      "description": "Reactive Energy Delivered. Key for CFE SSB FP calculation: fp = cos(atan(kVARh/kWh)).",
+      "deadband": 10
+    },
+    {
+      "reg": 21300,
+      "data_type": "float32",
+      "measurement_type": "thd_current_l1",
+      "unit": "%",
+      "description": "THD Current Phase A. CdR IEEE-519: limits depend on Icc/IL ratio.",
+      "deadband": 0.5,
+      "threshold_high": 20.0,
+      "severity": "medium"
+    },
+    {
+      "reg": 21302,
+      "data_type": "float32",
+      "measurement_type": "thd_current_l2",
+      "unit": "%",
+      "description": "THD Current Phase B",
+      "deadband": 0.5
+    },
+    {
+      "reg": 21304,
+      "data_type": "float32",
+      "measurement_type": "thd_current_l3",
+      "unit": "%",
+      "description": "THD Current Phase C",
+      "deadband": 0.5
+    },
+    {
+      "reg": 21330,
+      "data_type": "float32",
+      "measurement_type": "thd_voltage_l1",
+      "unit": "%",
+      "description": "THD Voltage A-N. CdR IEEE-519: ≤5% DATD for ≤69kV. Percentil 95, 7-day evaluation.",
+      "deadband": 0.3,
+      "threshold_high": 5.0,
+      "severity": "high"
+    },
+    {
+      "reg": 21332,
+      "data_type": "float32",
+      "measurement_type": "thd_voltage_l2",
+      "unit": "%",
+      "description": "THD Voltage B-N",
+      "deadband": 0.3
+    },
+    {
+      "reg": 21334,
+      "data_type": "float32",
+      "measurement_type": "thd_voltage_l3",
+      "unit": "%",
+      "description": "THD Voltage C-N",
+      "deadband": 0.3
+    },
+    {
+      "reg": 21364,
+      "data_type": "float32",
+      "measurement_type": "crest_factor_l1",
+      "unit": "ratio",
+      "description": "Crest Factor Phase A. Normal ≈1.414 (sine wave). High values indicate harmonic distortion or peak current issues.",
+      "deadband": 0.05,
+      "threshold_high": 2.0,
+      "severity": "medium"
+    },
+    {
+      "reg": 3020,
+      "data_type": "float32",
+      "measurement_type": "voltage_l12",
+      "unit": "V",
+      "description": "Voltage A-B (line-to-line)",
+      "deadband": 2
+    },
+    {
+      "reg": 3022,
+      "data_type": "float32",
+      "measurement_type": "voltage_l23",
+      "unit": "V",
+      "description": "Voltage B-C (line-to-line)",
+      "deadband": 2
+    },
+    {
+      "reg": 3024,
+      "data_type": "float32",
+      "measurement_type": "voltage_l31",
+      "unit": "V",
+      "description": "Voltage C-A (line-to-line)",
+      "deadband": 2
+    },
+    {
+      "reg": 3006,
+      "data_type": "float32",
+      "measurement_type": "current_neutral",
+      "unit": "A",
+      "description": "Current Neutral. Non-zero neutral current indicates unbalance or harmonics (triplen).",
+      "deadband": 0.3
+    }
+  ]
+}

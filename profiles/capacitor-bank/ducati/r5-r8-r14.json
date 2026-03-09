@@ -5,8 +5,9 @@
   "protocol": "modbus_rtu",
   "baud_rate": 9600,
   "byte_order": "big_endian",
-  "notes": "Ducati R5, R8, R14, R6T power factor controllers. All readings use FC03 (holding registers). Addresses are as documented in Annex A (the library subtracts 1 automatically for wire protocol). All measurement registers are 2-word (32-bit). 'Unsigned Long' = uint32, 'Bit-Signed Long' = int32 (MSB=1 means negative, NOT two's complement). R5 has fewer registers than R8/R14.",
+  "notes": "Ducati R5, R8, R14, R6T power factor controllers. All readings use FC03 (holding registers). Addresses are as documented in Annex A (the runtime subtracts 1 for wire protocol). All measurement registers are 2-word (32-bit). 'Unsigned Long' = uint32, 'Bit-Signed Long' = int32_signmag (MSB=1 means negative, NOT two's complement). R5 has fewer registers than R8/R14. Per-phase L2/L3 registers (R14-only) trimmed to fit intelligence registers within 32-register limit — use voltage_l1/current_l1/pf_l1 + equivalent for monitoring.",
   "address_note": "Physical wire address = documented address - 1. The register addresses below are the DOCUMENTED addresses (as shown in the Ducati manual). The runtime must subtract 1 before sending on the wire.",
+  "intelligence_notes": "This profile prioritizes capacitor bank health intelligence: step status, breakage detection, contactor wear (insertion counts), real kVAR per step (degradation), and alarm status. Combined with PF, THD, and temperature readings, the Opta can detect: (1) capacitor degradation (real_power < rated), (2) contactor end-of-life (max_insertion_exceeded), (3) resonance (THD alarms), (4) hunting (rapid step switching via battery_status changes), (5) PF non-compliance for Codigo de Red.",
   "registers": [
     {
       "reg": 2,
@@ -24,59 +25,26 @@
       "measurement_type": "voltage",
       "unit": "V",
       "description": "Three-phase equivalent voltage",
-      "deadband": 2
+      "deadband": 2,
+      "threshold_low": -5,
+      "threshold_high": 5,
+      "_threshold_note": "Thresholds are % deviation from Vnom. Application code must convert to absolute V based on site Vnom. CdR: permanent ±5%, temporary ±10%."
     },
     {
       "reg": 6,
       "data_type": "uint32",
       "measurement_type": "voltage_l12",
       "unit": "V",
-      "description": "Linked voltage L1-L2",
+      "description": "Linked voltage L1-L2 (for unbalance calculation)",
       "deadband": 2,
       "models": ["R8", "R14", "R6T"]
-    },
-    {
-      "reg": 8,
-      "data_type": "uint32",
-      "measurement_type": "voltage_l23",
-      "unit": "V",
-      "description": "Linked voltage L2-L3",
-      "deadband": 2,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 10,
-      "data_type": "uint32",
-      "measurement_type": "voltage_l31",
-      "unit": "V",
-      "description": "Linked voltage L3-L1",
-      "deadband": 2,
-      "models": ["R14", "R6T"]
     },
     {
       "reg": 12,
       "data_type": "uint32",
       "measurement_type": "voltage_l1",
       "unit": "V",
-      "description": "Phase-neutral voltage L1",
-      "deadband": 2,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 14,
-      "data_type": "uint32",
-      "measurement_type": "voltage_l2",
-      "unit": "V",
-      "description": "Phase-neutral voltage L2",
-      "deadband": 2,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 16,
-      "data_type": "uint32",
-      "measurement_type": "voltage_l3",
-      "unit": "V",
-      "description": "Phase-neutral voltage L3",
+      "description": "Phase-neutral voltage L1 (representative phase for unbalance)",
       "deadband": 2,
       "models": ["R14", "R6T"]
     },
@@ -95,74 +63,34 @@
       "measurement_type": "current_l1",
       "unit": "A",
       "scale": 0.01,
-      "description": "Current line 1 (hundredths of A)",
+      "description": "Current line 1 (representative phase for unbalance)",
       "deadband": 0.5,
       "models": ["R8", "R14", "R6T"]
     },
     {
-      "reg": 22,
-      "data_type": "uint32",
-      "measurement_type": "current_l2",
-      "unit": "A",
-      "scale": 0.01,
-      "description": "Current line 2 (hundredths of A)",
-      "deadband": 0.5,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 24,
-      "data_type": "uint32",
-      "measurement_type": "current_l3",
-      "unit": "A",
-      "scale": 0.01,
-      "description": "Current line 3 (hundredths of A)",
-      "deadband": 0.5,
-      "models": ["R14", "R6T"]
-    },
-    {
       "reg": 26,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "power_factor",
       "unit": "ratio",
       "scale": 0.01,
-      "description": "Three-phase equivalent power factor (hundredths, Bit-Signed Long)",
+      "description": "Three-phase equivalent power factor (Bit-Signed Long). CdR: ≥0.95 until Apr 2026, ≥0.97 after.",
       "deadband": 0.01,
       "threshold_low": 0.95,
       "severity": "high"
     },
     {
       "reg": 28,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "power_factor_l1",
       "unit": "ratio",
       "scale": 0.01,
-      "description": "Power factor line 1 (hundredths)",
+      "description": "Power factor line 1 (representative phase)",
       "deadband": 0.01,
       "models": ["R8", "R14", "R6T"]
     },
     {
-      "reg": 30,
-      "data_type": "int32",
-      "measurement_type": "power_factor_l2",
-      "unit": "ratio",
-      "scale": 0.01,
-      "description": "Power factor line 2 (hundredths)",
-      "deadband": 0.01,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 32,
-      "data_type": "int32",
-      "measurement_type": "power_factor_l3",
-      "unit": "ratio",
-      "scale": 0.01,
-      "description": "Power factor line 3 (hundredths)",
-      "deadband": 0.01,
-      "models": ["R14", "R6T"]
-    },
-    {
       "reg": 34,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "power",
       "unit": "W",
       "description": "Three-phase equivalent active power (Bit-Signed Long)",
@@ -170,7 +98,7 @@
     },
     {
       "reg": 58,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "apparent_power",
       "unit": "VA",
       "description": "Three-phase equivalent apparent power",
@@ -178,21 +106,11 @@
     },
     {
       "reg": 82,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "reactive_power",
       "unit": "VAR",
-      "description": "Three-phase equivalent reactive power (Bit-Signed Long)",
+      "description": "Three-phase equivalent reactive power (Bit-Signed Long). Key for CdR: positive = lagging (inductive), capacitors reduce this.",
       "deadband": 100
-    },
-    {
-      "reg": 198,
-      "data_type": "uint32",
-      "measurement_type": "current_neutral",
-      "unit": "A",
-      "scale": 0.01,
-      "description": "Neutral current (hundredths of A)",
-      "deadband": 0.2,
-      "models": ["R14", "R6T"]
     },
     {
       "reg": 212,
@@ -200,30 +118,10 @@
       "measurement_type": "thd_current_l1",
       "unit": "ratio",
       "scale": 0.001,
-      "description": "THD current line 1 (thousandths of fundamental)",
+      "description": "THD current line 1 (thousandths of fundamental). CdR IEEE-519: limits depend on Icc/IL ratio.",
       "deadband": 0.005,
       "threshold_high": 0.20,
       "severity": "medium"
-    },
-    {
-      "reg": 214,
-      "data_type": "uint32",
-      "measurement_type": "thd_current_l2",
-      "unit": "ratio",
-      "scale": 0.001,
-      "description": "THD current line 2 (thousandths of fundamental)",
-      "deadband": 0.005,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 216,
-      "data_type": "uint32",
-      "measurement_type": "thd_current_l3",
-      "unit": "ratio",
-      "scale": 0.001,
-      "description": "THD current line 3 (thousandths of fundamental)",
-      "deadband": 0.005,
-      "models": ["R14", "R6T"]
     },
     {
       "reg": 218,
@@ -231,38 +129,18 @@
       "measurement_type": "thd_voltage_l1",
       "unit": "ratio",
       "scale": 0.001,
-      "description": "THD voltage line 1 (thousandths of fundamental)",
+      "description": "THD voltage line 1 (thousandths of fundamental). CdR IEEE-519: ≤5% DATD for ≤69kV.",
       "deadband": 0.002,
       "threshold_high": 0.05,
       "severity": "high"
     },
     {
-      "reg": 220,
-      "data_type": "uint32",
-      "measurement_type": "thd_voltage_l2",
-      "unit": "ratio",
-      "scale": 0.001,
-      "description": "THD voltage line 2 (thousandths of fundamental)",
-      "deadband": 0.002,
-      "models": ["R14", "R6T"]
-    },
-    {
-      "reg": 222,
-      "data_type": "uint32",
-      "measurement_type": "thd_voltage_l3",
-      "unit": "ratio",
-      "scale": 0.001,
-      "description": "THD voltage line 3 (thousandths of fundamental)",
-      "deadband": 0.002,
-      "models": ["R14", "R6T"]
-    },
-    {
       "reg": 398,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "temperature",
       "unit": "C",
       "scale": 0.1,
-      "description": "Internal temperature (tens of °C, Bit-Signed Long)",
+      "description": "Internal temperature (tenths of °C). High temp = capacitor degradation accelerator.",
       "deadband": 1.0,
       "threshold_high": 60.0,
       "severity": "high",
@@ -270,12 +148,165 @@
     },
     {
       "reg": 392,
-      "data_type": "int32",
+      "data_type": "int32_signmag",
       "measurement_type": "delta_kvar",
       "unit": "VAR",
-      "description": "Delta-kVAr (capacitor compensation needed)",
+      "description": "Delta-kVAr (remaining compensation needed to reach target PF). Near zero = bank is compensating well.",
       "deadband": 100,
       "models": ["R5", "R8", "R14", "R6T"]
+    },
+
+    {"_section": "=== INTELLIGENCE REGISTERS (Capacitor Bank Health) ==="},
+
+    {
+      "reg": 762,
+      "data_type": "bitfield",
+      "measurement_type": "alarms_status",
+      "unit": "bitfield",
+      "scale": 1,
+      "description": "Alarms status bitfield. Bit0=high_voltage, Bit1=high_current, Bit2=low_voltage, Bit3=low_current, Bit4=THDI%, Bit5=THDV%, Bit6=temperature, Bit7=fan(R8/R14), Bit8=high_cosfi, Bit9=low_cosfi, Bit10=voltage_dip. Any bit=1 is an active alarm.",
+      "deadband": 0,
+      "severity": "high"
+    },
+    {
+      "reg": 764,
+      "data_type": "bitfield",
+      "measurement_type": "battery_breakage",
+      "unit": "bitfield",
+      "scale": 1,
+      "description": "Battery Breakage Status. Each bit = one step (Bit0=C1, Bit1=C2...). 1=BROKEN — controller detected capacitor failure via power measurement comparison. Critical: broken capacitor = reduced compensation capacity = PF drops.",
+      "deadband": 0,
+      "severity": "critical"
+    },
+    {
+      "reg": 766,
+      "data_type": "bitfield",
+      "measurement_type": "max_insertion_exceeded",
+      "unit": "bitfield",
+      "scale": 1,
+      "description": "Maximum Battery Insertion Status. Each bit = one step. 1=EXCEEDED max operations count — contactor at end of mechanical life. Schedule replacement before welding failure.",
+      "deadband": 0,
+      "severity": "high"
+    },
+    {
+      "reg": 768,
+      "data_type": "bitfield",
+      "measurement_type": "battery_status",
+      "unit": "bitfield",
+      "scale": 1,
+      "description": "Battery Status (which steps are currently inserted). Each bit = one step (Bit0=C1, Bit1=C2...). 1=INSERTED, 0=NOT INSERTED. Rapid changes = hunting behavior.",
+      "deadband": 0
+    },
+    {
+      "reg": 770,
+      "data_type": "bitfield",
+      "measurement_type": "relay_status",
+      "unit": "bitfield",
+      "scale": 1,
+      "description": "Physical relays status. Each bit = one relay. 1=CLOSED, 0=OPEN. Compare with battery_status for stuck relay detection.",
+      "deadband": 0
+    },
+
+    {"_section": "=== INSERTION COUNTS (Contactor Wear Tracking) ==="},
+
+    {
+      "reg": 410,
+      "data_type": "uint32",
+      "measurement_type": "insertions_c1",
+      "unit": "count",
+      "description": "Number of insertions — Step C1. Tracks contactor switching operations. Compare with max_insertion_exceeded.",
+      "deadband": 10
+    },
+    {
+      "reg": 412,
+      "data_type": "uint32",
+      "measurement_type": "insertions_c2",
+      "unit": "count",
+      "description": "Number of insertions — Step C2",
+      "deadband": 10
+    },
+    {
+      "reg": 414,
+      "data_type": "uint32",
+      "measurement_type": "insertions_c3",
+      "unit": "count",
+      "description": "Number of insertions — Step C3",
+      "deadband": 10
+    },
+    {
+      "reg": 416,
+      "data_type": "uint32",
+      "measurement_type": "insertions_c4",
+      "unit": "count",
+      "description": "Number of insertions — Step C4",
+      "deadband": 10
+    },
+    {
+      "reg": 418,
+      "data_type": "uint32",
+      "measurement_type": "insertions_c5",
+      "unit": "count",
+      "description": "Number of insertions — Step C5",
+      "deadband": 10
+    },
+    {
+      "reg": 420,
+      "data_type": "uint32",
+      "measurement_type": "insertions_c6",
+      "unit": "count",
+      "description": "Number of insertions — Step C6",
+      "deadband": 10
+    },
+
+    {"_section": "=== REAL kVAR PER STEP (Degradation Detection) ==="},
+
+    {
+      "reg": 530,
+      "data_type": "uint32",
+      "measurement_type": "real_power_step_c1",
+      "unit": "VAR",
+      "description": "Real reactive power delivered by Step C1. Compare with rated kVAR to detect capacitor degradation (real < 80% rated = degraded).",
+      "deadband": 50
+    },
+    {
+      "reg": 532,
+      "data_type": "uint32",
+      "measurement_type": "real_power_step_c2",
+      "unit": "VAR",
+      "description": "Real reactive power — Step C2",
+      "deadband": 50
+    },
+    {
+      "reg": 534,
+      "data_type": "uint32",
+      "measurement_type": "real_power_step_c3",
+      "unit": "VAR",
+      "description": "Real reactive power — Step C3",
+      "deadband": 50
+    },
+    {
+      "reg": 536,
+      "data_type": "uint32",
+      "measurement_type": "real_power_step_c4",
+      "unit": "VAR",
+      "description": "Real reactive power — Step C4",
+      "deadband": 50
+    },
+    {
+      "reg": 538,
+      "data_type": "uint32",
+      "measurement_type": "real_power_step_c5",
+      "unit": "VAR",
+      "description": "Real reactive power — Step C5",
+      "deadband": 50
+    },
+    {
+      "reg": 540,
+      "data_type": "uint32",
+      "measurement_type": "real_power_step_c6",
+      "unit": "VAR",
+      "description": "Real reactive power — Step C6",
+      "deadband": 50
     }
   ]
 }
