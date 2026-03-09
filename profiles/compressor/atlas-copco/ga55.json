@@ -1,0 +1,66 @@
+{
+  "device": "Atlas Copco GA55",
+  "manufacturer": "Atlas Copco",
+  "category": "compressor",
+  "protocol": "modbus_rtu",
+  "baud_rate": 9600,
+  "byte_order": "big_endian",
+  "notes": "Atlas Copco Elektronikon controller. Register map from MK5 gateway documentation. Baud/parity configurable via controller menu.",
+  "registers": [
+    {
+      "reg": 100,
+      "data_type": "int16",
+      "measurement_type": "pressure",
+      "unit": "bar",
+      "scale": 0.1,
+      "description": "Discharge pressure",
+      "deadband": 0.2,
+      "threshold_high": 10.0,
+      "severity": "high"
+    },
+    {
+      "reg": 102,
+      "data_type": "int16",
+      "measurement_type": "temperature",
+      "unit": "°C",
+      "scale": 0.1,
+      "description": "Discharge temperature",
+      "deadband": 2,
+      "threshold_high": 105,
+      "severity": "critical"
+    },
+    {
+      "reg": 104,
+      "data_type": "uint16",
+      "measurement_type": "motor_current",
+      "unit": "A",
+      "scale": 0.1,
+      "description": "Motor current",
+      "deadband": 1
+    },
+    {
+      "reg": 106,
+      "data_type": "uint32",
+      "measurement_type": "run_hours",
+      "unit": "h",
+      "description": "Total running hours",
+      "deadband": 1
+    },
+    {
+      "reg": 108,
+      "data_type": "uint32",
+      "measurement_type": "load_hours",
+      "unit": "h",
+      "description": "Total loaded hours",
+      "deadband": 1
+    },
+    {
+      "reg": 110,
+      "data_type": "uint16",
+      "measurement_type": "status_word",
+      "unit": "bitfield",
+      "description": "Compressor status (bit 0=running, bit 1=loaded, bit 2=alarm, bit 3=fault)",
+      "deadband": 0
+    }
+  ]
+}

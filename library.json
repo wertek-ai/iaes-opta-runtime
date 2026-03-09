@@ -1,0 +1,37 @@
+{
+  "name": "iaes-opta-runtime",
+  "version": "0.1.0",
+  "description": "IAES Edge Injector for Arduino Opta — translates Modbus registers into semantic IAES events",
+  "keywords": [
+    "iaes",
+    "modbus",
+    "industrial",
+    "iot",
+    "opta",
+    "predictive-maintenance",
+    "condition-monitoring",
+    "mqtt",
+    "edge"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wertek-ai/iaes-opta-runtime.git"
+  },
+  "authors": [
+    {
+      "name": "Wertek AI",
+      "email": "engineering@wertek.ai",
+      "url": "https://iaes.dev"
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://iaes.dev",
+  "frameworks": ["arduino"],
+  "platforms": ["ststm32"],
+  "dependencies": {
+    "ArduinoModbus": "^1.0.9",
+    "ArduinoRS485": "^1.0.5",
+    "ArduinoJson": "^7.0.0",
+    "ArduinoMqttClient": "^0.1.8"
+  }
+}

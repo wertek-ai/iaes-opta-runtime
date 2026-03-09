@@ -1,0 +1,274 @@
+{
+  "device": "Schneider ION 8650",
+  "manufacturer": "Schneider Electric",
+  "category": "energy_meter",
+  "protocol": "modbus_tcp",
+  "tcp_port": 502,
+  "byte_order": "word_swapped",
+  "notes": "Schneider ION 8650 power quality meter. Default Modbus Slave module map (4-wire WYE). Module 1 (40011-40025): UINT16, scale /10. Module 2 (40027-40057): INT32, scale /10. Module 4 (40091-40119): INT32-M10K, scale /10 — energy and THD max. Wire address = 4X register - 40001. Configurable via ION Setup. Source: 70022-0124-01 (2011).",
+  "address_note": "Wire address = Modbus register - 40001. E.g., 40011 → wire address 10. The runtime uses 0-based addressing.",
+  "registers": [
+    {
+      "reg": 10,
+      "data_type": "uint16",
+      "measurement_type": "voltage_l1",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vln a — Phase A L-N voltage (40011, Module 1, UINT16/10)",
+      "deadband": 2
+    },
+    {
+      "reg": 11,
+      "data_type": "uint16",
+      "measurement_type": "voltage_l2",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vln b — Phase B L-N voltage (40012)",
+      "deadband": 2
+    },
+    {
+      "reg": 12,
+      "data_type": "uint16",
+      "measurement_type": "voltage_l3",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vln c — Phase C L-N voltage (40013)",
+      "deadband": 2
+    },
+    {
+      "reg": 13,
+      "data_type": "uint16",
+      "measurement_type": "voltage",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vln avg — Average L-N voltage (40014)",
+      "deadband": 2
+    },
+    {
+      "reg": 14,
+      "data_type": "uint16",
+      "measurement_type": "voltage_l12",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vll ab — Line-to-line voltage A-B (40015)",
+      "deadband": 2
+    },
+    {
+      "reg": 15,
+      "data_type": "uint16",
+      "measurement_type": "voltage_l23",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vll bc — Line-to-line voltage B-C (40016)",
+      "deadband": 2
+    },
+    {
+      "reg": 16,
+      "data_type": "uint16",
+      "measurement_type": "voltage_l31",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Vll ca — Line-to-line voltage C-A (40017)",
+      "deadband": 2
+    },
+    {
+      "reg": 18,
+      "data_type": "uint16",
+      "measurement_type": "current_l1",
+      "unit": "A",
+      "scale": 0.1,
+      "description": "I a — Phase A current (40019, Module 1, UINT16/10)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 19,
+      "data_type": "uint16",
+      "measurement_type": "current_l2",
+      "unit": "A",
+      "scale": 0.1,
+      "description": "I b — Phase B current (40020)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 20,
+      "data_type": "uint16",
+      "measurement_type": "current_l3",
+      "unit": "A",
+      "scale": 0.1,
+      "description": "I c — Phase C current (40021)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 21,
+      "data_type": "uint16",
+      "measurement_type": "current",
+      "unit": "A",
+      "scale": 0.1,
+      "description": "I avg — Average current (40022)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 24,
+      "data_type": "uint16",
+      "measurement_type": "frequency",
+      "unit": "Hz",
+      "scale": 0.1,
+      "description": "Freq — Line frequency (40025, Module 1, UINT16/10)",
+      "deadband": 0.05
+    },
+    {
+      "reg": 32,
+      "data_type": "int32",
+      "measurement_type": "power",
+      "unit": "kW",
+      "scale": 0.1,
+      "description": "kW tot — Total active power (40033, Module 2, INT32/10)",
+      "deadband": 1
+    },
+    {
+      "reg": 40,
+      "data_type": "int32",
+      "measurement_type": "reactive_power",
+      "unit": "kVAR",
+      "scale": 0.1,
+      "description": "kVAR tot — Total reactive power (40041, Module 2, INT32/10)",
+      "deadband": 1
+    },
+    {
+      "reg": 48,
+      "data_type": "int32",
+      "measurement_type": "apparent_power",
+      "unit": "kVA",
+      "scale": 0.1,
+      "description": "kVA tot — Total apparent power (40049, Module 2, INT32/10)",
+      "deadband": 1
+    },
+    {
+      "reg": 56,
+      "data_type": "int32",
+      "measurement_type": "power_factor",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "PF sign tot — Total signed power factor ×1000 (40057, Module 2, INT32/10). Negative = leading.",
+      "deadband": 0.01,
+      "threshold_low": 0.90,
+      "severity": "high"
+    },
+    {
+      "reg": 22,
+      "data_type": "uint16",
+      "measurement_type": "voltage_unbalance",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "V unbal — Voltage unbalance percentage (40023)",
+      "deadband": 0.5,
+      "threshold_high": 2.0,
+      "severity": "medium"
+    },
+    {
+      "reg": 23,
+      "data_type": "uint16",
+      "measurement_type": "current_unbalance",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "I unbal — Current unbalance percentage (40024)",
+      "deadband": 0.5,
+      "threshold_high": 10.0,
+      "severity": "medium"
+    },
+    {
+      "reg": 90,
+      "data_type": "int32_m10k",
+      "measurement_type": "energy_delivered",
+      "unit": "kWh",
+      "scale": 0.1,
+      "description": "kWh del — Delivered active energy (40091, Module 4, INT32-M10K/10)",
+      "deadband": 10
+    },
+    {
+      "reg": 92,
+      "data_type": "int32_m10k",
+      "measurement_type": "energy_received",
+      "unit": "kWh",
+      "scale": 0.1,
+      "description": "kWh rec — Received active energy (40093, Module 4, INT32-M10K/10)",
+      "deadband": 10
+    },
+    {
+      "reg": 94,
+      "data_type": "int32_m10k",
+      "measurement_type": "energy_total",
+      "unit": "kWh",
+      "scale": 0.1,
+      "description": "kWh del+rec — Total active energy (40095, Module 4, INT32-M10K/10)",
+      "deadband": 10
+    },
+    {
+      "reg": 98,
+      "data_type": "int32_m10k",
+      "measurement_type": "reactive_energy_delivered",
+      "unit": "kVARh",
+      "scale": 0.1,
+      "description": "kVARh del — Delivered reactive energy (40099, Module 4, INT32-M10K/10)",
+      "deadband": 10
+    },
+    {
+      "reg": 108,
+      "data_type": "int32_m10k",
+      "measurement_type": "thd_voltage_l1_max",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "V1 THD mx — Phase A voltage THD maximum (40109, Module 4, INT32-M10K/10)",
+      "deadband": 0.5,
+      "threshold_high": 5.0,
+      "severity": "high"
+    },
+    {
+      "reg": 110,
+      "data_type": "int32_m10k",
+      "measurement_type": "thd_voltage_l2_max",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "V2 THD mx — Phase B voltage THD maximum (40111, Module 4, INT32-M10K/10)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 112,
+      "data_type": "int32_m10k",
+      "measurement_type": "thd_voltage_l3_max",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "V3 THD mx — Phase C voltage THD maximum (40113, Module 4, INT32-M10K/10)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 114,
+      "data_type": "int32_m10k",
+      "measurement_type": "thd_current_l1_max",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "I1 THD mx — Phase A current THD maximum (40115, Module 4, INT32-M10K/10)",
+      "deadband": 0.5,
+      "threshold_high": 20.0,
+      "severity": "medium"
+    },
+    {
+      "reg": 116,
+      "data_type": "int32_m10k",
+      "measurement_type": "thd_current_l2_max",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "I2 THD mx — Phase B current THD maximum (40117, Module 4, INT32-M10K/10)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 118,
+      "data_type": "int32_m10k",
+      "measurement_type": "thd_current_l3_max",
+      "unit": "%",
+      "scale": 0.1,
+      "description": "I3 THD mx — Phase C current THD maximum (40119, Module 4, INT32-M10K/10)",
+      "deadband": 0.5
+    }
+  ]
+}

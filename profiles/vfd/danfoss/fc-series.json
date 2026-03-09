@@ -1,0 +1,146 @@
+{
+  "device": "Danfoss FC Series VFD",
+  "manufacturer": "Danfoss",
+  "category": "vfd",
+  "protocol": "modbus_rtu",
+  "baud_rate": 9600,
+  "byte_order": "big_endian",
+  "notes": "Danfoss FC102, FC302, FC301 frequency converters. Register address = (parameter_number × 10) - 1. Data types: Uint16 = 1 register, Int32 = 2 registers, Uint8 = 1 register (lower byte). Conversion index maps to scale factor: -3 = ×0.001, -2 = ×0.01, -1 = ×0.1, 0 = ×1, 1 = ×10, 67 = ×(1/60). Default FC03 (holding registers). Default 8N1, address configurable via par 8-31.",
+  "address_note": "Wire address = (parameter × 10) - 1. E.g., parameter 16-13 → register 16130 → wire address 16129.",
+  "registers": [
+    {
+      "reg": 16129,
+      "data_type": "uint16",
+      "measurement_type": "output_frequency",
+      "unit": "Hz",
+      "scale": 0.1,
+      "description": "Par 16-13: Output frequency (tenths of Hz)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 16119,
+      "data_type": "uint16",
+      "measurement_type": "motor_voltage",
+      "unit": "V",
+      "scale": 0.1,
+      "description": "Par 16-12: Motor voltage (tenths of V)",
+      "deadband": 2
+    },
+    {
+      "reg": 16139,
+      "data_type": "int32",
+      "measurement_type": "motor_current",
+      "unit": "A",
+      "scale": 0.01,
+      "description": "Par 16-14: Motor current (hundredths of A)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 16099,
+      "data_type": "int32",
+      "measurement_type": "input_power",
+      "unit": "kW",
+      "scale": 10,
+      "description": "Par 16-10: Input power (conv index 1 = ×10 kW)",
+      "deadband": 1
+    },
+    {
+      "reg": 16169,
+      "data_type": "int32",
+      "measurement_type": "motor_speed",
+      "unit": "rpm",
+      "scale": 0.01667,
+      "description": "Par 16-17: Motor speed (conv index 67 = ×1/60, raw is RPM×60)",
+      "deadband": 10
+    },
+    {
+      "reg": 16159,
+      "data_type": "int32",
+      "measurement_type": "torque",
+      "unit": "Nm",
+      "scale": 0.1,
+      "description": "Par 16-16: Motor torque (tenths of Nm)",
+      "deadband": 1
+    },
+    {
+      "reg": 16219,
+      "data_type": "int16",
+      "measurement_type": "torque_pct",
+      "unit": "%",
+      "description": "Par 16-22: Motor torque percentage",
+      "deadband": 2
+    },
+    {
+      "reg": 16299,
+      "data_type": "uint16",
+      "measurement_type": "dc_bus_voltage",
+      "unit": "V",
+      "description": "Par 16-30: DC link voltage",
+      "deadband": 5
+    },
+    {
+      "reg": 16339,
+      "data_type": "uint16",
+      "measurement_type": "heatsink_temperature",
+      "unit": "°C",
+      "description": "Par 16-34: Heatsink temperature (conv index 100 = direct °C)",
+      "deadband": 2,
+      "threshold_high": 85,
+      "severity": "high"
+    },
+    {
+      "reg": 16179,
+      "data_type": "uint16",
+      "measurement_type": "motor_thermal",
+      "unit": "%",
+      "description": "Par 16-18: Motor thermal load percentage (0-100%)",
+      "deadband": 5,
+      "threshold_high": 100,
+      "severity": "critical"
+    },
+    {
+      "reg": 16349,
+      "data_type": "uint16",
+      "measurement_type": "inverter_thermal",
+      "unit": "%",
+      "description": "Par 16-35: Inverter thermal load percentage (0-100%)",
+      "deadband": 5,
+      "threshold_high": 100,
+      "severity": "high"
+    },
+    {
+      "reg": 16389,
+      "data_type": "uint16",
+      "measurement_type": "control_card_temperature",
+      "unit": "°C",
+      "description": "Par 16-39: Control card temperature (conv index 100 = direct °C)",
+      "deadband": 2,
+      "threshold_high": 75,
+      "severity": "medium"
+    },
+    {
+      "reg": 16029,
+      "data_type": "bitfield",
+      "measurement_type": "status_word",
+      "unit": "",
+      "description": "Par 16-03: FC status word (V2). Bit 0=Control ready, 1=Drive ready, 2=Enable, 3=Trip, 7=Warning, 8=Speed=ref, 11=Running",
+      "deadband": 0
+    },
+    {
+      "reg": 16899,
+      "data_type": "uint32",
+      "measurement_type": "alarm_word",
+      "unit": "",
+      "description": "Par 16-90: Active alarm word (bitfield)",
+      "deadband": 0
+    },
+    {
+      "reg": 16919,
+      "data_type": "uint32",
+      "measurement_type": "warning_word",
+      "unit": "",
+      "description": "Par 16-92: Active warning word (bitfield)",
+      "deadband": 0
+    }
+  ]
+}

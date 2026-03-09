@@ -1,0 +1,71 @@
+{
+  "device": "ABB ACS580 VFD",
+  "manufacturer": "ABB",
+  "category": "vfd",
+  "protocol": "modbus_rtu",
+  "baud_rate": 9600,
+  "byte_order": "big_endian",
+  "notes": "ABB Standard Modbus register map. Address configurable via keypad (Par 54.01). Default 8N1.",
+  "registers": [
+    {
+      "reg": 1,
+      "data_type": "float32",
+      "measurement_type": "motor_current",
+      "unit": "A",
+      "description": "Output current RMS",
+      "deadband": 0.5
+    },
+    {
+      "reg": 3,
+      "data_type": "uint16",
+      "measurement_type": "frequency",
+      "unit": "Hz",
+      "scale": 0.1,
+      "description": "Output frequency",
+      "deadband": 0.5
+    },
+    {
+      "reg": 5,
+      "data_type": "uint16",
+      "measurement_type": "motor_speed",
+      "unit": "rpm",
+      "description": "Motor speed (estimated or encoder)",
+      "deadband": 10
+    },
+    {
+      "reg": 7,
+      "data_type": "uint16",
+      "measurement_type": "voltage",
+      "unit": "V",
+      "description": "DC bus voltage",
+      "deadband": 5
+    },
+    {
+      "reg": 9,
+      "data_type": "float32",
+      "measurement_type": "power",
+      "unit": "kW",
+      "description": "Output power",
+      "deadband": 0.2
+    },
+    {
+      "reg": 10,
+      "data_type": "int16",
+      "measurement_type": "vfd_temperature",
+      "unit": "°C",
+      "scale": 0.1,
+      "description": "Heatsink temperature",
+      "deadband": 1,
+      "threshold_high": 85,
+      "severity": "high"
+    },
+    {
+      "reg": 13,
+      "data_type": "float32",
+      "measurement_type": "torque",
+      "unit": "%",
+      "description": "Motor torque (% nominal)",
+      "deadband": 2
+    }
+  ]
+}

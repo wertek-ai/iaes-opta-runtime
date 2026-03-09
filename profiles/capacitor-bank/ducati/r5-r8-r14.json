@@ -1,0 +1,281 @@
+{
+  "device": "Ducati R5/R8/R14 Power Factor Controller",
+  "manufacturer": "Ducati Energia",
+  "category": "capacitor_bank",
+  "protocol": "modbus_rtu",
+  "baud_rate": 9600,
+  "byte_order": "big_endian",
+  "notes": "Ducati R5, R8, R14, R6T power factor controllers. All readings use FC03 (holding registers). Addresses are as documented in Annex A (the library subtracts 1 automatically for wire protocol). All measurement registers are 2-word (32-bit). 'Unsigned Long' = uint32, 'Bit-Signed Long' = int32 (MSB=1 means negative, NOT two's complement). R5 has fewer registers than R8/R14.",
+  "address_note": "Physical wire address = documented address - 1. The register addresses below are the DOCUMENTED addresses (as shown in the Ducati manual). The runtime must subtract 1 before sending on the wire.",
+  "registers": [
+    {
+      "reg": 2,
+      "data_type": "uint32",
+      "measurement_type": "frequency",
+      "unit": "Hz",
+      "scale": 0.1,
+      "description": "Line frequency (tenths of Hz)",
+      "deadband": 0.05,
+      "models": ["R5", "R8", "R14", "R6T"]
+    },
+    {
+      "reg": 4,
+      "data_type": "uint32",
+      "measurement_type": "voltage",
+      "unit": "V",
+      "description": "Three-phase equivalent voltage",
+      "deadband": 2
+    },
+    {
+      "reg": 6,
+      "data_type": "uint32",
+      "measurement_type": "voltage_l12",
+      "unit": "V",
+      "description": "Linked voltage L1-L2",
+      "deadband": 2,
+      "models": ["R8", "R14", "R6T"]
+    },
+    {
+      "reg": 8,
+      "data_type": "uint32",
+      "measurement_type": "voltage_l23",
+      "unit": "V",
+      "description": "Linked voltage L2-L3",
+      "deadband": 2,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 10,
+      "data_type": "uint32",
+      "measurement_type": "voltage_l31",
+      "unit": "V",
+      "description": "Linked voltage L3-L1",
+      "deadband": 2,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 12,
+      "data_type": "uint32",
+      "measurement_type": "voltage_l1",
+      "unit": "V",
+      "description": "Phase-neutral voltage L1",
+      "deadband": 2,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 14,
+      "data_type": "uint32",
+      "measurement_type": "voltage_l2",
+      "unit": "V",
+      "description": "Phase-neutral voltage L2",
+      "deadband": 2,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 16,
+      "data_type": "uint32",
+      "measurement_type": "voltage_l3",
+      "unit": "V",
+      "description": "Phase-neutral voltage L3",
+      "deadband": 2,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 18,
+      "data_type": "uint32",
+      "measurement_type": "current",
+      "unit": "A",
+      "scale": 0.01,
+      "description": "Three-phase equivalent current (hundredths of A)",
+      "deadband": 0.5
+    },
+    {
+      "reg": 20,
+      "data_type": "uint32",
+      "measurement_type": "current_l1",
+      "unit": "A",
+      "scale": 0.01,
+      "description": "Current line 1 (hundredths of A)",
+      "deadband": 0.5,
+      "models": ["R8", "R14", "R6T"]
+    },
+    {
+      "reg": 22,
+      "data_type": "uint32",
+      "measurement_type": "current_l2",
+      "unit": "A",
+      "scale": 0.01,
+      "description": "Current line 2 (hundredths of A)",
+      "deadband": 0.5,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 24,
+      "data_type": "uint32",
+      "measurement_type": "current_l3",
+      "unit": "A",
+      "scale": 0.01,
+      "description": "Current line 3 (hundredths of A)",
+      "deadband": 0.5,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 26,
+      "data_type": "int32",
+      "measurement_type": "power_factor",
+      "unit": "ratio",
+      "scale": 0.01,
+      "description": "Three-phase equivalent power factor (hundredths, Bit-Signed Long)",
+      "deadband": 0.01,
+      "threshold_low": 0.95,
+      "severity": "high"
+    },
+    {
+      "reg": 28,
+      "data_type": "int32",
+      "measurement_type": "power_factor_l1",
+      "unit": "ratio",
+      "scale": 0.01,
+      "description": "Power factor line 1 (hundredths)",
+      "deadband": 0.01,
+      "models": ["R8", "R14", "R6T"]
+    },
+    {
+      "reg": 30,
+      "data_type": "int32",
+      "measurement_type": "power_factor_l2",
+      "unit": "ratio",
+      "scale": 0.01,
+      "description": "Power factor line 2 (hundredths)",
+      "deadband": 0.01,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 32,
+      "data_type": "int32",
+      "measurement_type": "power_factor_l3",
+      "unit": "ratio",
+      "scale": 0.01,
+      "description": "Power factor line 3 (hundredths)",
+      "deadband": 0.01,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 34,
+      "data_type": "int32",
+      "measurement_type": "power",
+      "unit": "W",
+      "description": "Three-phase equivalent active power (Bit-Signed Long)",
+      "deadband": 100
+    },
+    {
+      "reg": 58,
+      "data_type": "int32",
+      "measurement_type": "apparent_power",
+      "unit": "VA",
+      "description": "Three-phase equivalent apparent power",
+      "deadband": 100
+    },
+    {
+      "reg": 82,
+      "data_type": "int32",
+      "measurement_type": "reactive_power",
+      "unit": "VAR",
+      "description": "Three-phase equivalent reactive power (Bit-Signed Long)",
+      "deadband": 100
+    },
+    {
+      "reg": 198,
+      "data_type": "uint32",
+      "measurement_type": "current_neutral",
+      "unit": "A",
+      "scale": 0.01,
+      "description": "Neutral current (hundredths of A)",
+      "deadband": 0.2,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 212,
+      "data_type": "uint32",
+      "measurement_type": "thd_current_l1",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "THD current line 1 (thousandths of fundamental)",
+      "deadband": 0.005,
+      "threshold_high": 0.20,
+      "severity": "medium"
+    },
+    {
+      "reg": 214,
+      "data_type": "uint32",
+      "measurement_type": "thd_current_l2",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "THD current line 2 (thousandths of fundamental)",
+      "deadband": 0.005,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 216,
+      "data_type": "uint32",
+      "measurement_type": "thd_current_l3",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "THD current line 3 (thousandths of fundamental)",
+      "deadband": 0.005,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 218,
+      "data_type": "uint32",
+      "measurement_type": "thd_voltage_l1",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "THD voltage line 1 (thousandths of fundamental)",
+      "deadband": 0.002,
+      "threshold_high": 0.05,
+      "severity": "high"
+    },
+    {
+      "reg": 220,
+      "data_type": "uint32",
+      "measurement_type": "thd_voltage_l2",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "THD voltage line 2 (thousandths of fundamental)",
+      "deadband": 0.002,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 222,
+      "data_type": "uint32",
+      "measurement_type": "thd_voltage_l3",
+      "unit": "ratio",
+      "scale": 0.001,
+      "description": "THD voltage line 3 (thousandths of fundamental)",
+      "deadband": 0.002,
+      "models": ["R14", "R6T"]
+    },
+    {
+      "reg": 398,
+      "data_type": "int32",
+      "measurement_type": "temperature",
+      "unit": "C",
+      "scale": 0.1,
+      "description": "Internal temperature (tens of °C, Bit-Signed Long)",
+      "deadband": 1.0,
+      "threshold_high": 60.0,
+      "severity": "high",
+      "models": ["R5", "R8", "R14", "R6T"]
+    },
+    {
+      "reg": 392,
+      "data_type": "int32",
+      "measurement_type": "delta_kvar",
+      "unit": "VAR",
+      "description": "Delta-kVAr (capacitor compensation needed)",
+      "deadband": 100,
+      "models": ["R5", "R8", "R14", "R6T"]
+    }
+  ]
+}
