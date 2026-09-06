@@ -3,6 +3,8 @@
 A pre-script rather than a build flag, because a flag would have to be either
 wrong on Windows or unlinkable on GNU/Linux.
 """
+
+# SPDX-License-Identifier: MIT
 import sys
 
 Import("env")  # noqa: F821  (PlatformIO injects this)

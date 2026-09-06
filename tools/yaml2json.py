@@ -13,6 +13,8 @@ Usage:
 Requires: pip install pyyaml
 """
 
+# SPDX-License-Identifier: MIT
+
 import argparse
 import json
 import sys

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "IaesCanonical.h"
 
 #include <math.h>

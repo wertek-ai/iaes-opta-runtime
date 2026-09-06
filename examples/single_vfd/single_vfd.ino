@@ -6,6 +6,7 @@
  *
  * Hardware: Arduino Opta (Ethernet + RS485)
  * Connection: Opta RS485 A/B → VFD terminal 104(+)/105(-)
+ * SPDX-License-Identifier: MIT
  */
 
 #include <OptaRuntime.h>
