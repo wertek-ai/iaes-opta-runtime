@@ -125,10 +125,17 @@ Non-blocking Modbus reader using a state machine. Reads one register per call to
 
 ```cpp
 OptaModbus modbus;
-modbus.beginRTU(9600, SERIAL_8N1, 1000, 1000, 1000);
+modbus.beginRTU(9600, SERIAL_8N1, 1000, 1000, 1000);  // RS485 devices
+modbus.beginTCP(1000);                                 // Modbus TCP devices
 modbus.startCycle(devices, count, readings, 50, 100);
 while (modbus.busy()) { modbus.step(); }
 ```
+
+Each `DeviceProfile` says which wire it is on. `OptaRuntime::begin()` starts
+whichever are in use; call these directly only if you drive the reader
+yourself. Until 2026-09-06 `protocol`, `ip` and `tcp_port` existed in the
+configuration and nothing read them, so a device declared as TCP was read over
+RS485.
 
 States: `IDLE` -> `READ_REGISTER` -> `WAIT_GAP` -> `WAIT_DEVICE_GAP` -> `CYCLE_COMPLETE`
 
@@ -267,12 +274,11 @@ timing.rs485_post_delay_us = 1000; // RS485 post-transmission delay (us)
 
 ### SiteConfig
 
-Top-level configuration that holds all devices, transport, and timing:
+Top-level configuration that holds all devices, the broker, and timing:
 
 ```cpp
 SiteConfig config;
 strncpy(config.source, "opta.plant1.mcc3", sizeof(config.source) - 1);
-config.transport = TransportType::MQTT;
 strncpy(config.mqtt.broker, "mqtt.example.com", sizeof(config.mqtt.broker) - 1);
 config.mqtt.port = 1883;
 config.timing = timing;
@@ -308,51 +314,85 @@ runtime.loadSiteConfig(config);
 
 ## IAES Event Output
 
+This is not an illustration. `tools/e2e.py` captures what the runtime actually
+publishes and compares it with the block below, so a README that drifts from
+the code fails CI. Until 2026-09-06 there were three different shapes in this
+repository -- the schema's, the code's, and this section's, which used `id`
+instead of `event_id` and put the asset inside `data`.
+
 ### asset.measurement
 
+<!-- e2e:example-event -->
 ```json
 {
   "spec_version": "1.4",
-  "id": "a1b2c3d4-5678-4abc-9def-0123456789ab",
   "event_type": "asset.measurement",
-  "timestamp": "2026-03-09T14:30:00Z",
-  "source": "opta.plant1.mcc3",
-  "data": {
-    "asset_id": "VFD-ACS580-001",
-    "asset_name": "VFD Bomba P-101",
+  "event_id": "676575dd-24d4-4699-91d5-803729b10d6e",
+  "correlation_id": "676575dd-24d4-4699-91d5-803729b10d6e",
+  "timestamp": "2026-09-06T20:38:58+00:00",
+  "source": "opta.e2e.test",
+  "asset": {
+    "asset_id": "VFD-SIM-001",
+    "asset_name": "Simulated pump drive",
     "plant": "Planta Norte",
-    "area": "MCC-3",
+    "area": "MCC-3"
+  },
+  "data": {
     "measurement_type": "motor_current",
     "value": 12.5,
     "unit": "A"
   },
-  "content_hash": "a3f2b8c1d4e5f678"
+  "content_hash": "dde76bb36dfe8e69"
 }
 ```
+
+`event_id`, `correlation_id`, `timestamp` and `content_hash` change every run;
+everything else is fixed by the configuration and by the register the simulator
+serves.
+
+**`correlation_id` groups related events.** A root event correlates to itself,
+so it repeats `event_id`. Anything derived from it carries that value forward.
 
 ### asset.health
 
+Same envelope, with a different `data`:
+
 ```json
-{
-  "spec_version": "1.4",
-  "id": "b2c3d4e5-6789-4bcd-aef0-123456789abc",
-  "event_type": "asset.health",
-  "timestamp": "2026-03-09T14:30:05Z",
-  "source": "opta.plant1.mcc3",
   "data": {
-    "asset_id": "VFD-ACS580-001",
-    "asset_name": "VFD Bomba P-101",
-    "plant": "Planta Norte",
-    "area": "MCC-3",
-    "measurement_type": "vfd_temperature",
-    "value": 87.3,
-    "unit": "C",
+    "health_index": 0.32,
     "severity": "high",
-    "threshold_high": 85.0
-  },
-  "content_hash": "f6e5d4c3b2a19087"
-}
+    "recommended_action": "vfd_temperature read 87.30 C, above the configured threshold of 85.00 C"
+  }
 ```
+
+`failure_mode` is **absent on purpose**. A threshold crossing is not a fault
+classification, and the field is nullable. This runtime used to synthesize
+`"threshold_vfd_temperature"` and report a health index of 0.8 on every health
+event it ever emitted.
+
+## Trying it without an Opta
+
+```
+pip install "iaes[validate]" platformio
+python tools/e2e.py
+```
+
+That starts a Modbus TCP slave and an MQTT sink -- both inside the script,
+both standard library, so there is no broker to install -- runs the real
+runtime against them on your machine, and validates what arrives with the
+specification's own validator.
+
+It is also the gate: nothing here gets published unless a stranger can do that
+and get a valid IAES 1.4 event.
+
+## Transport security
+
+This runtime publishes **plaintext MQTT**. Securing the link is yours: a broker
+that terminates TLS, a VPN, or a closed network.
+
+Said plainly because the alternative was worse. There used to be a `use_tls`
+flag that nothing read, so setting it to `true` told you the link was encrypted
+while the password went out in the clear.
 
 ## Limits
 

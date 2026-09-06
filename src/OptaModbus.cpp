@@ -30,6 +30,31 @@ bool OptaModbus::beginRTU(uint32_t baud_rate, uint16_t serial_config,
 
 // ─── Non-blocking Cycle ──────────────────────────────────────
 
+bool OptaModbus::beginTCP(uint16_t timeout_ms) {
+    _tcp_timeout_ms = timeout_ms;
+    _tcp.setTimeout(timeout_ms);
+    _tcp_initialized = true;
+    _last_error = nullptr;
+    return true;
+}
+
+bool OptaModbus::tcpConnect(const DeviceProfile& device) {
+    const uint16_t port = device.tcp_port ? device.tcp_port : 502;
+    if (_tcp_connected_port == port && _tcp_connected_to == device.ip && _tcp.connected()) {
+        return true;
+    }
+    _tcp.stop();
+    _tcp_connected_port = 0;
+    if (!_tcp.begin(device.ip, port)) {
+        _last_error = "TCP connect failed";
+        return false;
+    }
+    _tcp_connected_to = device.ip;
+    _tcp_connected_port = port;
+    _last_error = nullptr;
+    return true;
+}
+
 void OptaModbus::startCycle(DeviceProfile* devices, uint8_t device_count,
                              float readings[][IAES_MAX_REGISTERS],
                              uint16_t register_gap_ms, uint16_t device_gap_ms) {
@@ -152,14 +177,30 @@ float OptaModbus::readRegister(const DeviceProfile& device,
     // ModbusFunction's values are the function codes themselves.
     const int fc = static_cast<int>(reg.function);
 
-    if (!ModbusRTUClient.requestFrom(device.address, fc, reg.reg, count)) {
-        _last_error = ModbusRTUClient.lastError();
+    ModbusClient* client = nullptr;
+    if (device.protocol == ModbusProtocol::TCP) {
+        if (!_tcp_initialized) { _last_error = "TCP device but beginTCP() was never called"; return NAN; }
+        if (!tcpConnect(device)) return NAN;
+        client = &_tcp;
+    } else {
+        if (!_rtu_initialized) { _last_error = "RTU device but beginRTU() was never called"; return NAN; }
+        client = &ModbusRTUClient;
+    }
+
+    if (!client->requestFrom(device.address, fc, reg.reg, count)) {
+        _last_error = client->lastError();
+        if (device.protocol == ModbusProtocol::TCP) {
+            // A failed request usually means the peer went away; drop the
+            // socket so the next read redials instead of retrying a dead one.
+            _tcp.stop();
+            _tcp_connected_port = 0;
+        }
         return NAN;
     }
 
     uint16_t raw[4] = {0};
     for (uint8_t i = 0; i < count; i++) {
-        int val = ModbusRTUClient.read();
+        int val = client->read();
         if (val < 0) {
             _last_error = "short read";
             return NAN;

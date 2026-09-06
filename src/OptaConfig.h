@@ -8,8 +8,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef IAES_CONFIG_H
-#define IAES_CONFIG_H
+#ifndef OPTA_CONFIG_H
+#define OPTA_CONFIG_H
 
 #include <Arduino.h>
 #include "iaes/IaesVocabulary.h"
@@ -167,34 +167,31 @@ struct TimingConfig {
 };
 
 // ─── Transport Configuration ─────────────────────────────────
-enum class TransportType : uint8_t {
-    MQTT = 0,
-    HTTPS,
-};
-
+//
+// MQTT, and only MQTT. Three settings used to live here that nothing read:
+// `use_tls`, a `TransportType` enum whose HTTPS member appeared nowhere in the
+// code, and an `HttpsConfig` struct. A setting that is stored and never
+// consulted is worse than an absent one -- `use_tls = true` told an integrator
+// the link was encrypted while the password went out in the clear.
+//
+// This runtime publishes plaintext MQTT. Securing the link is the integrator's:
+// a broker that terminates TLS, a VPN, or a closed network. That is stated
+// plainly rather than implied by a flag that does nothing.
 struct MqttConfig {
     char     broker[64]         = "";
     uint16_t port               = 1883;
     char     user[32]           = "";
     char     password[65]       = "";
     char     topic_prefix[IAES_MAX_TOPIC_LEN] = "iaes";
-    bool     use_tls            = false;
-};
-
-struct HttpsConfig {
-    char     endpoint[128]      = "";
-    char     api_key[65]        = "";
 };
 
 // ─── Site Configuration ──────────────────────────────────────
 struct SiteConfig {
     char            source[IAES_MAX_SOURCE_LEN]   = {};  // e.g. "opta.plant1.mcc3"
-    TransportType   transport       = TransportType::MQTT;
     MqttConfig      mqtt;
-    HttpsConfig     https;
     TimingConfig    timing;
     DeviceProfile   devices[IAES_MAX_DEVICES];
     uint8_t         device_count    = 0;
 };
 
-#endif // IAES_CONFIG_H
+#endif // OPTA_CONFIG_H

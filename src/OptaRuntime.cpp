@@ -42,7 +42,6 @@ void OptaRuntime::setMqtt(const char* broker, uint16_t port,
     _config.mqtt.user[sizeof(_config.mqtt.user) - 1] = '\0';
     strncpy(_config.mqtt.password, password, sizeof(_config.mqtt.password) - 1);
     _config.mqtt.password[sizeof(_config.mqtt.password) - 1] = '\0';
-    _config.transport = TransportType::MQTT;
 }
 
 void OptaRuntime::setTopicPrefix(const char* prefix) {
@@ -66,7 +65,17 @@ DeviceProfile* OptaRuntime::getDevice(uint8_t index) {
 // ─── Lifecycle ───────────────────────────────────────────────
 
 bool OptaRuntime::begin(byte* mac) {
-    debugPrint("iaes-opta-runtime v0.1.0 starting...");
+    debugPrint("iaes-opta-runtime v0.2.0 starting...");
+
+    // An absolute clock is a precondition, not a nicety. IAES requires an
+    // ISO 8601 timestamp and this runtime ships no clock of its own, so
+    // without setEpoch() there is nothing conforming to emit -- and starting
+    // anyway would mean discovering that one event at a time, in production.
+    if (!IaesEvent::clockIsSet()) {
+        debugPrint("No clock. Call setEpoch() before begin(): IAES needs a real timestamp.");
+        if (_error_cb) _error_cb("clock", iaesResultToString(IaesResult::CLOCK_NOT_SET));
+        return false;
+    }
 
     // Seed PRNG for UUID generation
     IaesEvent::seedRandom();
@@ -84,13 +93,12 @@ bool OptaRuntime::begin(byte* mac) {
                 Ethernet.localIP()[0], Ethernet.localIP()[1],
                 Ethernet.localIP()[2], Ethernet.localIP()[3]);
 
-    // Modbus RTU — check if any device uses RTU
-    bool has_rtu = false;
+    // Which wires are actually in use. A repository configured for TCP used to
+    // be read over RS485, because nothing consulted DeviceProfile::protocol.
+    bool has_rtu = false, has_tcp = false;
     for (uint8_t i = 0; i < _config.device_count; i++) {
-        if (_config.devices[i].protocol == ModbusProtocol::RTU) {
-            has_rtu = true;
-            break;
-        }
+        if (_config.devices[i].protocol == ModbusProtocol::TCP) has_tcp = true;
+        else                                                    has_rtu = true;
     }
 
     if (has_rtu) {
@@ -108,8 +116,17 @@ bool OptaRuntime::begin(byte* mac) {
         }
     }
 
+    if (has_tcp) {
+        debugPrint("Modbus TCP...");
+        if (!_modbus.beginTCP(_config.timing.modbus_timeout_ms)) {
+            debugPrint("Modbus TCP init failed!");
+            if (_error_cb) _error_cb("modbus", "TCP init failed");
+            return false;
+        }
+    }
+
     // MQTT
-    if (_config.transport == TransportType::MQTT && strlen(_config.mqtt.broker) > 0) {
+    if (strlen(_config.mqtt.broker) > 0) {
         debugPrintf("MQTT %s:%d...", _config.mqtt.broker, _config.mqtt.port);
         if (!_mqtt.begin(_eth_client, _config.mqtt)) {
             debugPrint("MQTT connect failed (will retry)");
@@ -232,7 +249,7 @@ uint16_t OptaRuntime::publishIaes() {
         const DeviceProfile& device = _config.devices[pe.device_index];
         doc.clear();
 
-        bool built = false;
+        IaesResult built = IaesResult::CLOCK_NOT_SET;
         if (pe.detection.result == DetectResult::HEALTH_EVENT) {
             // What this runtime knows is that a configured threshold was
             // crossed. That is not a fault classification, so failure_mode
@@ -261,7 +278,13 @@ uint16_t OptaRuntime::publishIaes() {
                                                 _config.source);
         }
 
-        if (!built) continue;
+        if (built != IaesResult::OK) {
+            // Say why. A refusal that reaches nobody is the same silence as an
+            // invalid event, only quieter.
+            if (_error_cb) _error_cb(device.name, iaesResultToString(built));
+            debugPrintf("  !! %s: %s", device.name, iaesResultToString(built));
+            continue;
+        }
 
         if (_event_cb) {
             const char* event_type = doc["event_type"] | "unknown";

@@ -38,6 +38,12 @@ void setup() {
     runtime.setDebug(true);
     runtime.addDevice(vfd);
 
+    // IAES requires a real timestamp, and this library ships no clock. Supply
+    // one -- NTP, an RTC, your gateway -- before begin(). The constant below
+    // only lets the example run: events built from it carry the wrong time.
+    // Without it begin() refuses, which is the point.
+    runtime.setEpoch(1788652800UL);  // 2026-09-06T00:00:00Z -- replace this
+
     if (!runtime.begin(mac)) {
         Serial.println("Runtime init failed!");
         while (1) { yield(); }

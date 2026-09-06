@@ -56,3 +56,19 @@ jobs:
         run: pio ci --board=opta --lib="." examples/multi_device/multi_device.ino
       - name: energy_meter
         run: pio ci --board=opta --lib="." examples/energy_meter/energy_meter.ino
+
+  gate:
+    name: "a stranger gets a valid IAES 1.4 event, with no hardware"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # The specification's own validator, from PyPI -- not a copy of the
+      # schemas kept in this repository, which would drift.
+      - run: pip install platformio "iaes[validate]"
+      # Runs the real runtime against a Modbus slave and an MQTT sink that the
+      # harness provides, then validates what arrives and checks that the
+      # README documents that exact shape.
+      - run: python tools/e2e.py

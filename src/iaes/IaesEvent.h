@@ -10,6 +10,10 @@
  * judgment first -- and buildHealth invented what it could not be given,
  * reporting a health index of 0.8 on every event it ever emitted.
  *
+ * It builds a conforming event or it builds none. Until 2026-09-06 it did
+ * neither: every event it produced was missing correlation_id, which the
+ * envelope requires, so the standard's own validator rejected all of them.
+ *
  * SPDX-License-Identifier: MIT
  */
 
@@ -21,17 +25,37 @@
 
 #define IAES_SPEC_VERSION "1.4"
 
+/** Why a build refused. Refusing is the point: a non-conforming event is worse
+ *  than no event, because it travels and nothing rejects it until far away. */
+enum class IaesResult : uint8_t {
+    OK = 0,
+    /** No absolute clock. IAES requires an ISO 8601 timestamp, and there is no
+     *  honest way to write one from an uptime counter. Call setEpoch() first. */
+    CLOCK_NOT_SET,
+    /** The canonical form of the payload would not fit. Truncating it would
+     *  give two different payloads the same content_hash. */
+    PAYLOAD_TOO_LARGE,
+};
+
+const char* iaesResultToString(IaesResult r);
+
 class IaesEvent {
 public:
     /**
      * asset.measurement -- one reading, in engineering units.
+     *
+     * correlation_id groups related events. Passing nullptr means this event
+     * starts its own flow, and it correlates to itself: correlation_id takes
+     * the value of event_id. Anything derived from it carries that value
+     * forward, which is what makes the flow traceable.
      */
-    static bool buildMeasurement(JsonDocument& doc,
-                                 const IaesAsset& asset,
-                                 const char* measurement_type,
-                                 double value,
-                                 const char* unit,
-                                 const char* source);
+    static IaesResult buildMeasurement(JsonDocument& doc,
+                                       const IaesAsset& asset,
+                                       const char* measurement_type,
+                                       double value,
+                                       const char* unit,
+                                       const char* source,
+                                       const char* correlation_id = nullptr);
 
     /**
      * asset.health -- a judgment about condition.
@@ -40,20 +64,33 @@ public:
      * recommended_action omits it, which is what the schema expects when there
      * is nothing to say; inventing a value would be worse than saying nothing.
      */
-    static bool buildHealth(JsonDocument& doc,
-                            const IaesAsset& asset,
-                            double health_index,
-                            IaesSeverity severity,
-                            const char* failure_mode,
-                            const char* recommended_action,
-                            const char* source);
+    static IaesResult buildHealth(JsonDocument& doc,
+                                  const IaesAsset& asset,
+                                  double health_index,
+                                  IaesSeverity severity,
+                                  const char* failure_mode,
+                                  const char* recommended_action,
+                                  const char* source,
+                                  const char* correlation_id = nullptr);
 
     /** Pseudo-UUID v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx. Needs 37 bytes. */
     static void generateUUID(char* buffer, size_t len);
 
-    /** ISO 8601 if setEpoch() was called; otherwise a millis-relative stamp. */
-    static void getTimestamp(char* buffer, size_t len);
+    /**
+     * ISO 8601 UTC, and only that.
+     *
+     * Returns false when no absolute clock has been set. It used to return a
+     * string like "T+123.456" in that case, which is not a date and which the
+     * envelope schema's `format: date-time` describes but does not enforce --
+     * so it travelled, and nothing complained.
+     */
+    static bool getTimestamp(char* buffer, size_t len);
+
+    /** Supplies absolute time. Required before any event can be built. */
     static void setEpoch(uint32_t epoch_seconds);
+
+    /** Whether an absolute clock is available. */
+    static bool clockIsSet();
 
     /**
      * The specification's canonical form of a data payload: compact JSON,
@@ -74,10 +111,11 @@ public:
     static void seedRandom();
 
 private:
-    static void buildEnvelope(JsonDocument& doc,
+    static bool buildEnvelope(JsonDocument& doc,
                               const char* event_type,
                               const IaesAsset& asset,
-                              const char* source);
+                              const char* source,
+                              const char* correlation_id);
 
     static uint32_t      _epoch_base;
     static unsigned long _epoch_millis;

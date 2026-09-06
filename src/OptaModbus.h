@@ -14,6 +14,7 @@
 #include "OptaConfig.h"
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
+#include <Ethernet.h>
 
 // ArduinoModbus defines COILS, DISCRETE_INPUTS, HOLDING_REGISTERS and
 // INPUT_REGISTERS as plain macros, which the preprocessor then substitutes
@@ -45,6 +46,17 @@ public:
                   uint16_t pre_delay_us = 1000,
                   uint16_t post_delay_us = 1000,
                   uint16_t timeout_ms = 1000);
+
+    /**
+     * Modbus TCP. Nothing to initialize on the wire -- each device is dialled
+     * when it is read -- but this must be called for TCP devices to be
+     * attempted at all, so that a repository configured for TCP fails loudly
+     * instead of being read over RTU.
+     *
+     * Until 2026-09-06 DeviceProfile carried `protocol`, `ip` and `tcp_port`
+     * and nothing read any of them: every device went out over RS485.
+     */
+    bool beginTCP(uint16_t timeout_ms = 1000);
 
     /**
      * Start a new read cycle across all devices.
@@ -84,6 +96,17 @@ public:
 private:
     const char* _last_error = nullptr;
     bool _rtu_initialized = false;
+    bool _tcp_initialized = false;
+    uint16_t _tcp_timeout_ms = 1000;
+
+    // One connection, reused: an Opta has more devices than it has sockets.
+    EthernetClient  _tcp_socket;
+    ModbusTCPClient _tcp{_tcp_socket};
+    IPAddress       _tcp_connected_to;
+    uint16_t        _tcp_connected_port = 0;
+
+    /** Connects to this device if not already connected to it. */
+    bool tcpConnect(const DeviceProfile& device);
 
     // State machine
     ModbusState     _state = ModbusState::IDLE;

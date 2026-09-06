@@ -186,6 +186,11 @@ void test_nested_objects_sort_at_every_level(void) {
     TEST_ASSERT_EQUAL_STRING("{\"y\":3,\"z\":{\"a\":1,\"b\":2}}", canonical);
 }
 
+// Unity calls these around every test. Absent, the MinGW linker refuses --
+// the GNU/Linux one did not, so the suite ran in CI and not on Windows.
+void setUp(void) {}
+void tearDown(void) {}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_sha256_matches_the_published_vectors);

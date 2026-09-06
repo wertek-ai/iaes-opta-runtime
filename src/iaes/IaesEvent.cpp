@@ -15,12 +15,27 @@ uint32_t IaesEvent::_epoch_base = 0;
 unsigned long IaesEvent::_epoch_millis = 0;
 bool IaesEvent::_seeded = false;
 
+const char* iaesResultToString(IaesResult r) {
+    switch (r) {
+        case IaesResult::OK:                return "ok";
+        case IaesResult::CLOCK_NOT_SET:     return "CLOCK_NOT_SET: call setEpoch() before emitting";
+        case IaesResult::PAYLOAD_TOO_LARGE: return "PAYLOAD_TOO_LARGE: canonical form does not fit";
+        default:                            return "unknown";
+    }
+}
+
 // ─── Envelope ────────────────────────────────────────────────
 
-void IaesEvent::buildEnvelope(JsonDocument& doc,
+bool IaesEvent::buildEnvelope(JsonDocument& doc,
                               const char* event_type,
                               const IaesAsset& asset_id,
-                              const char* source) {
+                              const char* source,
+                              const char* correlation_id) {
+    char ts[30];
+    // Before anything else: without absolute time there is no conforming
+    // event to build, and half an envelope is worse than none.
+    if (!getTimestamp(ts, sizeof(ts))) return false;
+
     doc["spec_version"] = IAES_SPEC_VERSION;
     doc["event_type"] = event_type;
 
@@ -28,10 +43,12 @@ void IaesEvent::buildEnvelope(JsonDocument& doc,
     generateUUID(uuid, sizeof(uuid));
     doc["event_id"] = uuid;
 
-    char ts[30];
-    getTimestamp(ts, sizeof(ts));
-    doc["timestamp"] = ts;
+    // A root event correlates to itself. The alternative -- a second random
+    // UUID -- would satisfy the schema while meaning nothing, and would make
+    // two events of the same flow look unrelated.
+    doc["correlation_id"] = (correlation_id && *correlation_id) ? correlation_id : uuid;
 
+    doc["timestamp"] = ts;
     doc["source"] = source;
 
     JsonObject a = doc["asset"].to<JsonObject>();
@@ -39,17 +56,22 @@ void IaesEvent::buildEnvelope(JsonDocument& doc,
     if (strlen(asset_id.asset_name) > 0) a["asset_name"] = asset_id.asset_name;
     if (strlen(asset_id.plant) > 0)      a["plant"] = asset_id.plant;
     if (strlen(asset_id.area) > 0)       a["area"] = asset_id.area;
+    return true;
 }
 
 // ─── asset.measurement ───────────────────────────────────────
 
-bool IaesEvent::buildMeasurement(JsonDocument& doc,
-                                 const IaesAsset& asset,
-                                 const char* measurement_type,
-                                 double value,
-                                 const char* unit,
-                                 const char* source) {
-    buildEnvelope(doc, "asset.measurement", asset, source);
+IaesResult IaesEvent::buildMeasurement(JsonDocument& doc,
+                                       const IaesAsset& asset,
+                                       const char* measurement_type,
+                                       double value,
+                                       const char* unit,
+                                       const char* source,
+                                       const char* correlation_id) {
+    if (!buildEnvelope(doc, "asset.measurement", asset, source, correlation_id)) {
+        doc.clear();
+        return IaesResult::CLOCK_NOT_SET;
+    }
 
     JsonObject data = doc["data"].to<JsonObject>();
     data["measurement_type"] = measurement_type;
@@ -57,21 +79,28 @@ bool IaesEvent::buildMeasurement(JsonDocument& doc,
     data["unit"] = unit;
 
     char hash[17];
-    if (!computeContentHash(data.operator JsonObjectConst(), hash, sizeof(hash))) return false;
+    if (!computeContentHash(data.operator JsonObjectConst(), hash, sizeof(hash))) {
+        doc.clear();
+        return IaesResult::PAYLOAD_TOO_LARGE;
+    }
     doc["content_hash"] = hash;
-    return true;
+    return IaesResult::OK;
 }
 
 // ─── asset.health ────────────────────────────────────────────
 
-bool IaesEvent::buildHealth(JsonDocument& doc,
-                            const IaesAsset& asset,
-                            double health_index,
-                            IaesSeverity severity,
-                            const char* failure_mode,
-                            const char* recommended_action,
-                            const char* source) {
-    buildEnvelope(doc, "asset.health", asset, source);
+IaesResult IaesEvent::buildHealth(JsonDocument& doc,
+                                  const IaesAsset& asset,
+                                  double health_index,
+                                  IaesSeverity severity,
+                                  const char* failure_mode,
+                                  const char* recommended_action,
+                                  const char* source,
+                                  const char* correlation_id) {
+    if (!buildEnvelope(doc, "asset.health", asset, source, correlation_id)) {
+        doc.clear();
+        return IaesResult::CLOCK_NOT_SET;
+    }
 
     JsonObject data = doc["data"].to<JsonObject>();
     data["health_index"] = health_index;
@@ -82,9 +111,12 @@ bool IaesEvent::buildHealth(JsonDocument& doc,
     if (recommended_action && *recommended_action) data["recommended_action"] = recommended_action;
 
     char hash[17];
-    if (!computeContentHash(data.operator JsonObjectConst(), hash, sizeof(hash))) return false;
+    if (!computeContentHash(data.operator JsonObjectConst(), hash, sizeof(hash))) {
+        doc.clear();
+        return IaesResult::PAYLOAD_TOO_LARGE;
+    }
     doc["content_hash"] = hash;
-    return true;
+    return IaesResult::OK;
 }
 
 // ─── Canonical form and content hash ─────────────────────────
@@ -153,11 +185,20 @@ void IaesEvent::setEpoch(uint32_t epoch_seconds) {
     seedRandom();
 }
 
-void IaesEvent::getTimestamp(char* buffer, size_t len) {
-    if (len < 25) return;
+bool IaesEvent::clockIsSet() {
+    return _epoch_base > 0;
+}
 
-    if (_epoch_base > 0) {
-        // Real UTC time from NTP (millis() rollover safe: unsigned subtraction wraps correctly)
+bool IaesEvent::getTimestamp(char* buffer, size_t len) {
+    if (len < 25) return false;
+    // No absolute clock, no timestamp. This used to fall through to a string
+    // like "T+123.456", which is not a date -- and because the envelope
+    // schema's `format: date-time` is an annotation rather than an assertion,
+    // nothing downstream complained.
+    if (_epoch_base == 0) { buffer[0] = '\0'; return false; }
+
+    {
+        // Real UTC time (millis() rollover safe: unsigned subtraction wraps correctly)
         uint32_t elapsed_s = (millis() - _epoch_millis) / 1000;
         uint32_t now = _epoch_base + elapsed_s;
 
@@ -199,9 +240,6 @@ void IaesEvent::getTimestamp(char* buffer, size_t len) {
         snprintf(buffer, len, "%04lu-%02u-%02uT%02u:%02u:%02u+00:00",
                  (unsigned long)y, m + 1, (uint8_t)(days + 1),
                  hours, minutes, seconds);
-    } else {
-        // No NTP — use millis-based relative timestamp
-        unsigned long ms = millis();
-        snprintf(buffer, len, "T+%lu.%03lu", ms / 1000, ms % 1000);
     }
+    return true;
 }
