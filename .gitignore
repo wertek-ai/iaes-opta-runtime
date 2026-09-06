@@ -1,0 +1,7 @@
+# PlatformIO build output. 504 of these files were committed once, 6.1 MB
+# including a linked executable, because a `git add -A` swept them in.
+.pio/
+
+# Python
+__pycache__/
+*.py[cod]
