@@ -1,0 +1,34 @@
+{
+  "$comment": "What in this repository is the standard, what is this product, and what is neither. Checked by tools/check_boundary.py: a directory that holds source and is not classified here fails CI, so the question gets answered when the code is written and the answer is cheap.",
+  "iaes_spec_version": "1.4",
+
+  "directories": {
+    "src/iaes": {
+      "class": "standard",
+      "why": "Expresses an IAES event and nothing else: the published vocabulary, asset identity, the envelope, the canonical form and the specification's content hash. A competitor implementing IAES needs to ask us nothing to use it.",
+      "may_include": ["src/iaes"]
+    },
+    "src": {
+      "class": "product",
+      "why": "Deadbands, thresholds, when a value deserves a severity, and how this runtime talks to a device. All of it is judgment or transport, and neither is part of the standard."
+    },
+    "profiles": {
+      "class": "product",
+      "why": "An equipment catalog. GOVERNANCE.md section 1.2 excludes these from IAES by name, thresholds included. Seven profiles, 174 registers, 29 thresholds."
+    },
+    "examples": {
+      "class": "product",
+      "why": "Shows this runtime being configured, not the standard being implemented."
+    },
+    "tools": {
+      "class": "neutral",
+      "why": "Repository plumbing: it neither implements the standard nor ships in the product."
+    },
+    "test": {
+      "class": "neutral",
+      "why": "Conformance and unit tests. They exercise both sides without belonging to either."
+    }
+  },
+
+  "the_rule": "Nothing under a directory classed 'standard' may include a file from outside it. That is the whole boundary in one sentence, and it is the one that broke: until 2026-09-06 IaesEvent.h included IaesDetector.h, so producing a standard event required running this product's judgment first."
+}

@@ -1,6 +1,6 @@
 # iaes-opta-runtime
 
-IAES Edge Injector for Arduino Opta -- translates raw Modbus registers into semantic IAES v1.2 events.
+IAES Edge Injector for Arduino Opta -- translates raw Modbus registers into semantic IAES v1.4 events.
 
 ## What it does
 
@@ -43,10 +43,10 @@ Installed automatically by PlatformIO. For Arduino IDE, install these via Librar
 ## Quick Start
 
 ```cpp
-#include <IaesRuntime.h>
+#include <OptaRuntime.h>
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x01 };
-IaesRuntime runtime;
+OptaRuntime runtime;
 
 void setup() {
     Serial.begin(115200);
@@ -95,12 +95,12 @@ python tools/yaml2json.py profiles/vfd/abb/acs580.yaml
 
 ## API Reference
 
-### IaesRuntime
+### OptaRuntime
 
 Main orchestrator. Ties together Modbus reading, change detection, and event publishing.
 
 ```cpp
-IaesRuntime runtime;
+OptaRuntime runtime;
 
 runtime.loadSiteConfig(config);       // Load full site configuration
 runtime.addDevice(device);            // Add a single device profile
@@ -119,12 +119,12 @@ runtime.stats();                      // Get RuntimeStats (polls, events, errors
 runtime.forcePublish();               // Force immediate read + publish (blocking)
 ```
 
-### IaesModbus
+### OptaModbus
 
 Non-blocking Modbus reader using a state machine. Reads one register per call to `step()`.
 
 ```cpp
-IaesModbus modbus;
+OptaModbus modbus;
 modbus.beginRTU(9600, SERIAL_8N1, 1000, 1000, 1000);
 modbus.startCycle(devices, count, readings, 50, 100);
 while (modbus.busy()) { modbus.step(); }
@@ -132,12 +132,12 @@ while (modbus.busy()) { modbus.step(); }
 
 States: `IDLE` -> `READ_REGISTER` -> `WAIT_GAP` -> `WAIT_DEVICE_GAP` -> `CYCLE_COMPLETE`
 
-### IaesDetector
+### OptaDetector
 
 Deadband and threshold change detection. Prevents event spam by only emitting events when values change meaningfully.
 
 ```cpp
-IaesDetector detector;
+OptaDetector detector;
 DetectOutput result = detector.detect(value, reg);
 // result.result: NO_CHANGE, MEASUREMENT_EVENT, or HEALTH_EVENT
 ```
@@ -151,27 +151,62 @@ Detection logic:
 
 ### IaesEvent
 
-Static class that builds IAES v1.2 compliant JSON events. Generates pseudo-UUID v4 identifiers and FNV-1a content hashes.
+Static class that builds IAES v1.4 compliant JSON events. Generates pseudo-UUID v4 identifiers and the specification's SHA-256 content hashes.
 
 ```cpp
 JsonDocument doc;
-IaesEvent::buildMeasurement(doc, device, detection, "opta.plant1.mcc3");
-IaesEvent::buildHealth(doc, device, detection, "opta.plant1.mcc3");
+IaesEvent::buildMeasurement(doc, device.asset,
+                            "vibration_velocity", 1.23, "mm/s",
+                            "opta.plant1.mcc3");
+IaesEvent::buildHealth(doc, device.asset,
+                       0.4, IaesSeverity::HIGH,
+                       nullptr,                    // no fault classification
+                       "vibration_velocity read 12.4 mm/s, above the "
+                       "configured threshold of 10.0 mm/s",
+                       "opta.plant1.mcc3");
 IaesEvent::setEpoch(epoch_seconds);  // Call once for real timestamps
 ```
 
-### IaesMqtt
+It takes values, not a `DetectOutput`. Building a standard event must not
+require running this runtime's judgment first -- see **The boundary** below.
+
+### OptaMqtt
 
 MQTT publisher with exponential backoff reconnection.
 
 ```cpp
-IaesMqtt mqtt;
+OptaMqtt mqtt;
 mqtt.begin(eth_client, mqtt_config);
 mqtt.publish(doc, "opta.plant1.mcc3");
 mqtt.loop();  // Call regularly for keepalive
 ```
 
 Topic format: `{prefix}/{source}/{event_type}` (e.g. `iaes/opta.plant1.mcc3/asset.measurement`)
+
+## The boundary
+
+This repository holds two different things, and [`BOUNDARY.json`](BOUNDARY.json)
+says which is which. CI fails if a directory that holds source is not
+classified, and fails if anything on the standard side includes a file from
+outside it.
+
+| | |
+|---|---|
+| `src/iaes/` | **the standard.** Expressing an IAES event: the published vocabulary, asset identity, the envelope, the canonical form, the content hash. Implementable without asking us anything. |
+| `src/`, `profiles/`, `examples/` | **this product.** Deadbands, thresholds, when a reading deserves a severity, and how to talk to a device. `profiles/` is an equipment catalog, which IAES governance excludes by name. |
+| `tools/`, `test/` | neither. |
+
+Two things were wrong until 2026-09-06, and both looked ordinary:
+
+- `IaesEvent.h` included `IaesDetector.h`, so producing a standard event
+  required this product's judgment. Reversed: the builder now takes values.
+- `buildHealth` reported a health index of **0.8 on every health event it ever
+  emitted**, and synthesized a `failure_mode` from the measurement name. Both
+  are the caller's now, and a threshold crossing no longer claims to be a fault
+  classification.
+
+The classes that are not the standard no longer carry its name: `IaesRuntime`,
+`IaesDetector`, `IaesModbus`, `IaesMqtt` and `IaesConfig` became `Opta*`.
 
 ## Configuration
 
@@ -277,7 +312,7 @@ runtime.loadSiteConfig(config);
 
 ```json
 {
-  "spec_version": "1.2",
+  "spec_version": "1.4",
   "id": "a1b2c3d4-5678-4abc-9def-0123456789ab",
   "event_type": "asset.measurement",
   "timestamp": "2026-03-09T14:30:00Z",
@@ -299,7 +334,7 @@ runtime.loadSiteConfig(config);
 
 ```json
 {
-  "spec_version": "1.2",
+  "spec_version": "1.4",
   "id": "b2c3d4e5-6789-4bcd-aef0-123456789abc",
   "event_type": "asset.health",
   "timestamp": "2026-03-09T14:30:05Z",

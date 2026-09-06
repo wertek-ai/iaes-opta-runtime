@@ -8,29 +8,29 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "IaesModbus.h"
+#include "OptaModbus.h"
 
 // ─── Initialization ──────────────────────────────────────────
 
-bool IaesModbus::beginRTU(uint32_t baud_rate, uint16_t serial_config,
+bool OptaModbus::beginRTU(uint32_t baud_rate, uint16_t serial_config,
                           uint16_t pre_delay_us, uint16_t post_delay_us,
                           uint16_t timeout_ms) {
     RS485.setDelays(pre_delay_us, post_delay_us);
 
     if (!ModbusRTUClient.begin(baud_rate, serial_config)) {
-        _last_error = -1;
+        _last_error = "RS485 begin failed";
         return false;
     }
 
     ModbusRTUClient.setTimeout(timeout_ms);
     _rtu_initialized = true;
-    _last_error = 0;
+    _last_error = nullptr;
     return true;
 }
 
 // ─── Non-blocking Cycle ──────────────────────────────────────
 
-void IaesModbus::startCycle(DeviceProfile* devices, uint8_t device_count,
+void OptaModbus::startCycle(DeviceProfile* devices, uint8_t device_count,
                              float readings[][IAES_MAX_REGISTERS],
                              uint16_t register_gap_ms, uint16_t device_gap_ms) {
     _devices = devices;
@@ -52,7 +52,7 @@ void IaesModbus::startCycle(DeviceProfile* devices, uint8_t device_count,
     }
 }
 
-ModbusState IaesModbus::step() {
+ModbusState OptaModbus::step() {
     switch (_state) {
 
         case ModbusState::READ_REGISTER: {
@@ -126,7 +126,7 @@ ModbusState IaesModbus::step() {
 
 // ─── Single Register Read (blocking, used by step) ───────────
 
-float IaesModbus::readRegister(const DeviceProfile& device,
+float OptaModbus::readRegister(const DeviceProfile& device,
                                 const RegisterMapping& reg) {
     uint8_t count = 1;
     switch (reg.data_type) {
@@ -149,8 +149,8 @@ float IaesModbus::readRegister(const DeviceProfile& device,
             break;
     }
 
-    int fc = (reg.function == ModbusFunction::INPUT_REGISTERS)
-             ? INPUT_REGISTERS : HOLDING_REGISTERS;
+    // ModbusFunction's values are the function codes themselves.
+    const int fc = static_cast<int>(reg.function);
 
     if (!ModbusRTUClient.requestFrom(device.address, fc, reg.reg, count)) {
         _last_error = ModbusRTUClient.lastError();
@@ -161,19 +161,19 @@ float IaesModbus::readRegister(const DeviceProfile& device,
     for (uint8_t i = 0; i < count; i++) {
         int val = ModbusRTUClient.read();
         if (val < 0) {
-            _last_error = -2;
+            _last_error = "short read";
             return NAN;
         }
         raw[i] = (uint16_t)val;
     }
 
-    _last_error = 0;
+    _last_error = nullptr;
     return convertValue(reg, device, raw, count);
 }
 
 // ─── Data Type Conversion ────────────────────────────────────
 
-float IaesModbus::convertValue(const RegisterMapping& mapping,
+float OptaModbus::convertValue(const RegisterMapping& mapping,
                                 const DeviceProfile& device,
                                 uint16_t* raw, uint8_t count) {
     float result = 0.0f;
@@ -267,7 +267,7 @@ float IaesModbus::convertValue(const RegisterMapping& mapping,
 
 // ─── Byte Order Helpers ──────────────────────────────────────
 
-uint32_t IaesModbus::applyByteOrder32(uint16_t high, uint16_t low,
+uint32_t OptaModbus::applyByteOrder32(uint16_t high, uint16_t low,
                                        ModbusByteOrder order) {
     switch (order) {
         case ModbusByteOrder::BIG_ENDIAN_BE:
@@ -283,7 +283,7 @@ uint32_t IaesModbus::applyByteOrder32(uint16_t high, uint16_t low,
     }
 }
 
-uint64_t IaesModbus::applyByteOrder64(uint16_t* regs, ModbusByteOrder order) {
+uint64_t OptaModbus::applyByteOrder64(uint16_t* regs, ModbusByteOrder order) {
     switch (order) {
         case ModbusByteOrder::BIG_ENDIAN_BE:
             return ((uint64_t)regs[0] << 48) | ((uint64_t)regs[1] << 32) |

@@ -7,10 +7,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "IaesRuntime.h"
+#include "OptaRuntime.h"
 #include <stdarg.h>
 
-IaesRuntime::IaesRuntime() {
+OptaRuntime::OptaRuntime() {
     memset(&_stats, 0, sizeof(_stats));
     memset(_readings, 0, sizeof(_readings));
     memset(_pending, 0, sizeof(_pending));
@@ -18,22 +18,22 @@ IaesRuntime::IaesRuntime() {
 
 // ─── Configuration ───────────────────────────────────────────
 
-void IaesRuntime::loadSiteConfig(const SiteConfig& config) {
+void OptaRuntime::loadSiteConfig(const SiteConfig& config) {
     _config = config;
 }
 
-bool IaesRuntime::addDevice(const DeviceProfile& device) {
+bool OptaRuntime::addDevice(const DeviceProfile& device) {
     if (_config.device_count >= IAES_MAX_DEVICES) return false;
     _config.devices[_config.device_count++] = device;
     return true;
 }
 
-void IaesRuntime::setSource(const char* source) {
+void OptaRuntime::setSource(const char* source) {
     strncpy(_config.source, source, IAES_MAX_SOURCE_LEN - 1);
     _config.source[IAES_MAX_SOURCE_LEN - 1] = '\0';
 }
 
-void IaesRuntime::setMqtt(const char* broker, uint16_t port,
+void OptaRuntime::setMqtt(const char* broker, uint16_t port,
                            const char* user, const char* password) {
     strncpy(_config.mqtt.broker, broker, sizeof(_config.mqtt.broker) - 1);
     _config.mqtt.broker[sizeof(_config.mqtt.broker) - 1] = '\0';
@@ -45,27 +45,27 @@ void IaesRuntime::setMqtt(const char* broker, uint16_t port,
     _config.transport = TransportType::MQTT;
 }
 
-void IaesRuntime::setTopicPrefix(const char* prefix) {
+void OptaRuntime::setTopicPrefix(const char* prefix) {
     strncpy(_config.mqtt.topic_prefix, prefix, IAES_MAX_TOPIC_LEN - 1);
     _config.mqtt.topic_prefix[IAES_MAX_TOPIC_LEN - 1] = '\0';
 }
 
-void IaesRuntime::setTiming(const TimingConfig& timing) {
+void OptaRuntime::setTiming(const TimingConfig& timing) {
     _config.timing = timing;
 }
 
-void IaesRuntime::setEpoch(uint32_t epoch_seconds) {
+void OptaRuntime::setEpoch(uint32_t epoch_seconds) {
     IaesEvent::setEpoch(epoch_seconds);
 }
 
-DeviceProfile* IaesRuntime::getDevice(uint8_t index) {
+DeviceProfile* OptaRuntime::getDevice(uint8_t index) {
     if (index >= _config.device_count) return nullptr;
     return &_config.devices[index];
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────
 
-bool IaesRuntime::begin(byte* mac) {
+bool OptaRuntime::begin(byte* mac) {
     debugPrint("iaes-opta-runtime v0.1.0 starting...");
 
     // Seed PRNG for UUID generation
@@ -131,7 +131,7 @@ bool IaesRuntime::begin(byte* mac) {
 
 // ─── Main Poll Loop (NON-BLOCKING) ──────────────────────────
 
-void IaesRuntime::poll() {
+void OptaRuntime::poll() {
     if (!_initialized) return;
 
     unsigned long now = millis();
@@ -172,7 +172,7 @@ void IaesRuntime::poll() {
     }
 }
 
-void IaesRuntime::forcePublish() {
+void OptaRuntime::forcePublish() {
     _modbus.startCycle(_config.devices, _config.device_count,
                        _readings,
                        _config.timing.register_gap_ms,
@@ -187,7 +187,7 @@ void IaesRuntime::forcePublish() {
 
 // ─── Detect Changes ──────────────────────────────────────────
 
-uint16_t IaesRuntime::detectChanges() {
+uint16_t OptaRuntime::detectChanges() {
     _pending_count = 0;
     uint16_t events = 0;
 
@@ -219,7 +219,7 @@ uint16_t IaesRuntime::detectChanges() {
 
 // ─── Publish Events ──────────────────────────────────────────
 
-uint16_t IaesRuntime::publishIaes() {
+uint16_t OptaRuntime::publishIaes() {
     uint16_t published = 0;
 
     // Reuse one JsonDocument for all events (avoids repeated heap alloc/free)
@@ -234,9 +234,31 @@ uint16_t IaesRuntime::publishIaes() {
 
         bool built = false;
         if (pe.detection.result == DetectResult::HEALTH_EVENT) {
-            built = IaesEvent::buildHealth(doc, device, pe.detection, _config.source);
+            // What this runtime knows is that a configured threshold was
+            // crossed. That is not a fault classification, so failure_mode
+            // stays empty rather than carrying a synthesized one; the
+            // description names the threshold so an operator can check it.
+            const RegisterMapping& reg = device.registers[pe.register_index];
+            const float threshold = pe.detection.threshold_high
+                                      ? reg.threshold_high : reg.threshold_low;
+            char action[160];
+            snprintf(action, sizeof(action),
+                     "%s read %.2f %s, %s the configured threshold of %.2f %s",
+                     pe.detection.measurement_type, pe.detection.value,
+                     pe.detection.unit,
+                     pe.detection.threshold_high ? "above" : "below",
+                     threshold, pe.detection.unit);
+
+            built = IaesEvent::buildHealth(doc, device.asset,
+                                           pe.detection.health_index,
+                                           pe.detection.severity,
+                                           nullptr, action, _config.source);
         } else {
-            built = IaesEvent::buildMeasurement(doc, device, pe.detection, _config.source);
+            built = IaesEvent::buildMeasurement(doc, device.asset,
+                                                pe.detection.measurement_type,
+                                                pe.detection.value,
+                                                pe.detection.unit,
+                                                _config.source);
         }
 
         if (!built) continue;
@@ -267,14 +289,14 @@ uint16_t IaesRuntime::publishIaes() {
 
 // ─── Debug Helpers ───────────────────────────────────────────
 
-void IaesRuntime::debugPrint(const char* msg) {
+void OptaRuntime::debugPrint(const char* msg) {
     if (_debug) {
         Serial.print("[IAES] ");
         Serial.println(msg);
     }
 }
 
-void IaesRuntime::debugPrintf(const char* fmt, ...) {
+void OptaRuntime::debugPrintf(const char* fmt, ...) {
     if (!_debug) return;
 
     char buf[128];

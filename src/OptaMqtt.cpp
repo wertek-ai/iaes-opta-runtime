@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "IaesMqtt.h"
+#include "OptaMqtt.h"
 
-IaesMqtt::~IaesMqtt() {
+OptaMqtt::~OptaMqtt() {
     delete _mqtt;
     _mqtt = nullptr;
 }
 
-bool IaesMqtt::begin(EthernetClient& eth_client, const MqttConfig& config) {
+bool OptaMqtt::begin(EthernetClient& eth_client, const MqttConfig& config) {
     _config = config;
 
     // Clean up previous instance if begin() is called again
@@ -29,18 +29,18 @@ bool IaesMqtt::begin(EthernetClient& eth_client, const MqttConfig& config) {
     return true;
 }
 
-bool IaesMqtt::loop() {
+bool OptaMqtt::loop() {
     if (!_mqtt) return false;
     _mqtt->poll();
     return connected();
 }
 
-bool IaesMqtt::connected() {
+bool OptaMqtt::connected() {
     if (!_mqtt) return false;
     return _mqtt->connected();
 }
 
-bool IaesMqtt::reconnect() {
+bool OptaMqtt::reconnect() {
     if (!_mqtt) return false;
 
     unsigned long now = millis();
@@ -60,7 +60,7 @@ bool IaesMqtt::reconnect() {
     return false;
 }
 
-bool IaesMqtt::publish(const JsonDocument& doc, const char* source) {
+bool OptaMqtt::publish(const JsonDocument& doc, const char* source) {
     if (!connected()) return false;
 
     char topic[128];
@@ -79,7 +79,7 @@ bool IaesMqtt::publish(const JsonDocument& doc, const char* source) {
     return publishRaw(topic, json);
 }
 
-bool IaesMqtt::publishRaw(const char* topic, const char* json) {
+bool OptaMqtt::publishRaw(const char* topic, const char* json) {
     if (!connected()) return false;
 
     _mqtt->beginMessage(topic);

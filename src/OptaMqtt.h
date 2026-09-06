@@ -10,14 +10,14 @@
 #ifndef IAES_MQTT_H
 #define IAES_MQTT_H
 
-#include "IaesConfig.h"
+#include "OptaConfig.h"
 #include <ArduinoMqttClient.h>
 #include <Ethernet.h>
 #include <ArduinoJson.h>
 
-class IaesMqtt {
+class OptaMqtt {
 public:
-    ~IaesMqtt();
+    ~OptaMqtt();
 
     bool begin(EthernetClient& eth_client, const MqttConfig& config);
     bool loop();

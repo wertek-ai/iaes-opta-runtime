@@ -1,6 +1,6 @@
 {
   "name": "iaes-opta-runtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IAES Edge Injector for Arduino Opta — translates Modbus registers into semantic IAES events",
   "keywords": [
     "iaes",
@@ -26,12 +26,17 @@
   ],
   "license": "MIT",
   "homepage": "https://iaes.dev",
-  "frameworks": ["arduino"],
-  "platforms": ["ststm32"],
+  "frameworks": [
+    "arduino"
+  ],
+  "platforms": [
+    "ststm32"
+  ],
   "dependencies": {
-    "ArduinoModbus": "^1.0.9",
-    "ArduinoRS485": "^1.0.5",
-    "ArduinoJson": "^7.0.0",
-    "ArduinoMqttClient": "^0.1.8"
+    "arduino-libraries/ArduinoModbus": "^1.0.9",
+    "arduino-libraries/ArduinoRS485": "^1.0.5",
+    "bblanchon/ArduinoJson": "^7.0.0",
+    "arduino-libraries/ArduinoMqttClient": "^0.1.8",
+    "arduino-libraries/Ethernet": "^2.0.2"
   }
 }

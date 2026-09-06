@@ -9,10 +9,10 @@
  * Hardware: Arduino Opta (Ethernet + RS485)
  */
 
-#include <IaesRuntime.h>
+#include <OptaRuntime.h>
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x02 };
-IaesRuntime runtime;
+OptaRuntime runtime;
 
 void setup() {
     Serial.begin(115200);

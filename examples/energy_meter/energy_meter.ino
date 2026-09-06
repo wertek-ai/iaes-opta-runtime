@@ -11,10 +11,10 @@
  * Hardware: Arduino Opta (Ethernet + RS485)
  */
 
-#include <IaesRuntime.h>
+#include <OptaRuntime.h>
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x03 };
-IaesRuntime runtime;
+OptaRuntime runtime;
 
 void onIaesEvent(const JsonDocument& event, const char* event_type) {
     Serial.print(">> IAES ");

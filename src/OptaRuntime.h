@@ -5,9 +5,9 @@
  *   read_modbus() → detect_changes() → publish_iaes()
  *
  * Usage:
- *   #include <IaesRuntime.h>
+ *   #include <OptaRuntime.h>
  *
- *   IaesRuntime runtime;
+ *   OptaRuntime runtime;
  *   runtime.loadSiteConfig(config);
  *   runtime.begin();
  *
@@ -21,11 +21,11 @@
 #ifndef IAES_RUNTIME_H
 #define IAES_RUNTIME_H
 
-#include "IaesConfig.h"
-#include "IaesModbus.h"
-#include "IaesDetector.h"
-#include "IaesEvent.h"
-#include "IaesMqtt.h"
+#include "OptaConfig.h"
+#include "OptaModbus.h"
+#include "OptaDetector.h"
+#include "iaes/IaesEvent.h"
+#include "OptaMqtt.h"
 #include <Ethernet.h>
 
 // ─── Runtime Statistics ──────────────────────────────────────
@@ -54,9 +54,9 @@ struct PendingEvent {
 #define IAES_MAX_PENDING  64
 
 // ─── Runtime ─────────────────────────────────────────────────
-class IaesRuntime {
+class OptaRuntime {
 public:
-    IaesRuntime();
+    OptaRuntime();
 
     // ── Configuration ────────────────────────────────────────
 
@@ -104,9 +104,9 @@ public:
 
 private:
     SiteConfig     _config;
-    IaesModbus     _modbus;
-    IaesDetector   _detector;
-    IaesMqtt       _mqtt;
+    OptaModbus     _modbus;
+    OptaDetector   _detector;
+    OptaMqtt       _mqtt;
     EthernetClient _eth_client;
     RuntimeStats   _stats;
 

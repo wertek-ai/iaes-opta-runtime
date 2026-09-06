@@ -8,12 +8,23 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef IAES_MODBUS_H
-#define IAES_MODBUS_H
+#ifndef OPTA_MODBUS_H
+#define OPTA_MODBUS_H
 
-#include "IaesConfig.h"
+#include "OptaConfig.h"
 #include <ArduinoRS485.h>
 #include <ArduinoModbus.h>
+
+// ArduinoModbus defines COILS, DISCRETE_INPUTS, HOLDING_REGISTERS and
+// INPUT_REGISTERS as plain macros, which the preprocessor then substitutes
+// into ModbusFunction::HOLDING_REGISTERS -- so any file naming a member of
+// that enum failed to compile. This library uses the enum, never the macros,
+// so they go. Undone here rather than by renaming the enum, which is the
+// public surface examples and profiles are written against.
+#undef COILS
+#undef DISCRETE_INPUTS
+#undef HOLDING_REGISTERS
+#undef INPUT_REGISTERS
 
 // ─── Read State Machine ─────────────────────────────────────
 enum class ModbusState : uint8_t {
@@ -24,7 +35,7 @@ enum class ModbusState : uint8_t {
     CYCLE_COMPLETE,     // All devices/registers read
 };
 
-class IaesModbus {
+class OptaModbus {
 public:
     /**
      * Initialize Modbus RTU on the Opta's built-in RS485 port.
@@ -62,7 +73,8 @@ public:
     /**
      * Get last error code.
      */
-    int lastError() const { return _last_error; }
+    /** The last failure, or nullptr. Owned by the caller of the read. */
+    const char* lastError() const { return _last_error; }
 
     /**
      * Read a single register (blocking — used internally and for manual reads).
@@ -70,7 +82,7 @@ public:
     float readRegister(const DeviceProfile& device, const RegisterMapping& reg);
 
 private:
-    int _last_error = 0;
+    const char* _last_error = nullptr;
     bool _rtu_initialized = false;
 
     // State machine
@@ -93,4 +105,4 @@ private:
     uint64_t applyByteOrder64(uint16_t* regs, ModbusByteOrder order);
 };
 
-#endif // IAES_MODBUS_H
+#endif // OPTA_MODBUS_H

@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  boundary:
+    name: "the boundary holds"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Stdlib only, so these run and fail before any toolchain installs.
+      - name: Every directory declares its side, and the standard reaches nothing outside it
+        run: python tools/check_boundary.py
+      - name: The standard depends on no infrastructure of ours
+        run: python tools/check_frontier.py
+
+  conformance:
+    name: "content_hash agrees with the other SDKs"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install platformio
+      # Runs on the host: agreement between languages cannot be checked on a
+      # board. The expected digests come from the Python SDK and are quoted in
+      # the test, so a reader can reproduce them without this repository.
+      - run: pio test -e native
+
+  build:
+    name: "the examples still build for the Opta"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install platformio
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('platformio.ini') }}
+      # `pio ci` is the documented way to build the examples of an Arduino
+      # library: it installs this repository as the library under test and
+      # resolves the dependencies library.json declares.
+      - name: single_vfd
+        run: pio ci --board=opta --lib="." examples/single_vfd/single_vfd.ino
+      - name: multi_device
+        run: pio ci --board=opta --lib="." examples/multi_device/multi_device.ino
+      - name: energy_meter
+        run: pio ci --board=opta --lib="." examples/energy_meter/energy_meter.ino

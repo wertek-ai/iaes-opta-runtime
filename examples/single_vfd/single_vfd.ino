@@ -8,10 +8,10 @@
  * Connection: Opta RS485 A/B → VFD terminal 104(+)/105(-)
  */
 
-#include <IaesRuntime.h>
+#include <OptaRuntime.h>
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x01 };
-IaesRuntime runtime;
+OptaRuntime runtime;
 
 void setup() {
     Serial.begin(115200);

@@ -12,39 +12,17 @@
 #define IAES_CONFIG_H
 
 #include <Arduino.h>
+#include "iaes/IaesVocabulary.h"
 
 // ─── Limits ───────────────────────────────────────────────────
 #define IAES_MAX_DEVICES       8    // Max devices per Opta
 #define IAES_MAX_REGISTERS    32    // Max registers per device
-#define IAES_MAX_NAME_LEN     32
 #define IAES_MAX_UNIT_LEN     12
 #define IAES_MAX_SOURCE_LEN   48
-#define IAES_MAX_ASSET_LEN    32
-#define IAES_MAX_PLANT_LEN    32
-#define IAES_MAX_AREA_LEN     32
 #define IAES_MAX_TOPIC_LEN    64
 
-// ─── Severity Enum ───────────────────────────────────────────
-// Replaces char[12] — saves 11 bytes per register (2.8 KB total).
-enum class IaesSeverity : uint8_t {
-    INFO = 0,
-    LOW,
-    MEDIUM,
-    HIGH,
-    CRITICAL,
-};
-
-// Returns the IAES string for a severity level.
-inline const char* severityToString(IaesSeverity s) {
-    switch (s) {
-        case IaesSeverity::INFO:     return "info";
-        case IaesSeverity::LOW:      return "low";
-        case IaesSeverity::MEDIUM:   return "medium";
-        case IaesSeverity::HIGH:     return "high";
-        case IaesSeverity::CRITICAL: return "critical";
-        default:                     return "high";
-    }
-}
+// Severity and asset identity are the standard's, not this runtime's.
+// They live in iaes/IaesVocabulary.h.
 
 // ─── Modbus Data Types ───────────────────────────────────────
 enum class ModbusDataType : uint8_t {
@@ -120,11 +98,9 @@ struct DeviceProfile {
     uint16_t        serial_config   = SERIAL_8N1;        // RTU serial config
     ModbusFunction  default_function = ModbusFunction::HOLDING_REGISTERS; // Default FC for all registers
 
-    // IAES asset identity
-    char            asset_id[IAES_MAX_ASSET_LEN]  = {};  // e.g. "VFD-ACS580-001"
-    char            asset_name[IAES_MAX_NAME_LEN] = {};  // e.g. "VFD Bomba P-101"
-    char            plant[IAES_MAX_PLANT_LEN]     = {};  // e.g. "Planta Norte"
-    char            area[IAES_MAX_AREA_LEN]       = {};  // e.g. "MCC-3"
+    // Asset identity, in the standard's own type. Everything above this
+    // line is how to talk to the device; this is what the event is about.
+    IaesAsset       asset;
 
     // Register mappings
     RegisterMapping registers[IAES_MAX_REGISTERS];
@@ -167,14 +143,14 @@ struct DeviceProfile {
      */
     void setIdentity(const char* id, const char* aname = "",
                      const char* p = "", const char* a = "") {
-        strncpy(asset_id, id, IAES_MAX_ASSET_LEN - 1);
-        asset_id[IAES_MAX_ASSET_LEN - 1] = '\0';
-        strncpy(asset_name, aname, IAES_MAX_NAME_LEN - 1);
-        asset_name[IAES_MAX_NAME_LEN - 1] = '\0';
-        strncpy(plant, p, IAES_MAX_PLANT_LEN - 1);
-        plant[IAES_MAX_PLANT_LEN - 1] = '\0';
-        strncpy(area, a, IAES_MAX_AREA_LEN - 1);
-        area[IAES_MAX_AREA_LEN - 1] = '\0';
+        strncpy(asset.asset_id, id, IAES_MAX_ASSET_LEN - 1);
+        asset.asset_id[IAES_MAX_ASSET_LEN - 1] = '\0';
+        strncpy(asset.asset_name, aname, IAES_MAX_NAME_LEN - 1);
+        asset.asset_name[IAES_MAX_NAME_LEN - 1] = '\0';
+        strncpy(asset.plant, p, IAES_MAX_PLANT_LEN - 1);
+        asset.plant[IAES_MAX_PLANT_LEN - 1] = '\0';
+        strncpy(asset.area, a, IAES_MAX_AREA_LEN - 1);
+        asset.area[IAES_MAX_AREA_LEN - 1] = '\0';
     }
 };
 

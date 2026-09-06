@@ -1,20 +1,26 @@
 /**
- * iaes-opta-runtime — IAES Event Builder Implementation
+ * iaes — Event builder implementation
  * SPDX-License-Identifier: MIT
  */
 
 #include "IaesEvent.h"
 
+#include "IaesCanonical.h"
+#include "IaesHash.h"
+
+#include <Arduino.h>
+#include <string.h>
+
 uint32_t IaesEvent::_epoch_base = 0;
 unsigned long IaesEvent::_epoch_millis = 0;
 bool IaesEvent::_seeded = false;
 
-// ─── Envelope Builder ────────────────────────────────────────
+// ─── Envelope ────────────────────────────────────────────────
 
 void IaesEvent::buildEnvelope(JsonDocument& doc,
-                               const char* event_type,
-                               const DeviceProfile& device,
-                               const char* source) {
+                              const char* event_type,
+                              const IaesAsset& asset_id,
+                              const char* source) {
     doc["spec_version"] = IAES_SPEC_VERSION;
     doc["event_type"] = event_type;
 
@@ -28,71 +34,77 @@ void IaesEvent::buildEnvelope(JsonDocument& doc,
 
     doc["source"] = source;
 
-    JsonObject asset = doc["asset"].to<JsonObject>();
-    asset["asset_id"] = device.asset_id;
-    if (strlen(device.asset_name) > 0) asset["asset_name"] = device.asset_name;
-    if (strlen(device.plant) > 0)      asset["plant"] = device.plant;
-    if (strlen(device.area) > 0)       asset["area"] = device.area;
+    JsonObject a = doc["asset"].to<JsonObject>();
+    a["asset_id"] = asset_id.asset_id;
+    if (strlen(asset_id.asset_name) > 0) a["asset_name"] = asset_id.asset_name;
+    if (strlen(asset_id.plant) > 0)      a["plant"] = asset_id.plant;
+    if (strlen(asset_id.area) > 0)       a["area"] = asset_id.area;
 }
 
-// ─── Measurement Event ───────────────────────────────────────
+// ─── asset.measurement ───────────────────────────────────────
 
 bool IaesEvent::buildMeasurement(JsonDocument& doc,
-                                  const DeviceProfile& device,
-                                  const DetectOutput& detection,
-                                  const char* source) {
-    buildEnvelope(doc, "asset.measurement", device, source);
+                                 const IaesAsset& asset,
+                                 const char* measurement_type,
+                                 double value,
+                                 const char* unit,
+                                 const char* source) {
+    buildEnvelope(doc, "asset.measurement", asset, source);
 
     JsonObject data = doc["data"].to<JsonObject>();
-    data["measurement_type"] = detection.measurement_type;
-
-    // Use snprintf instead of String class (avoids heap fragmentation)
-    char val_buf[16];
-    snprintf(val_buf, sizeof(val_buf), "%.2f", detection.value);
-    data["value"] = serialized(val_buf);
-    data["unit"] = detection.unit;
+    data["measurement_type"] = measurement_type;
+    data["value"] = value;
+    data["unit"] = unit;
 
     char hash[17];
-    computeContentHash(data, hash, sizeof(hash));
+    if (!computeContentHash(data.operator JsonObjectConst(), hash, sizeof(hash))) return false;
     doc["content_hash"] = hash;
-
     return true;
 }
 
-// ─── Health Event ────────────────────────────────────────────
+// ─── asset.health ────────────────────────────────────────────
 
 bool IaesEvent::buildHealth(JsonDocument& doc,
-                             const DeviceProfile& device,
-                             const DetectOutput& detection,
-                             const char* source) {
-    buildEnvelope(doc, "asset.health", device, source);
+                            const IaesAsset& asset,
+                            double health_index,
+                            IaesSeverity severity,
+                            const char* failure_mode,
+                            const char* recommended_action,
+                            const char* source) {
+    buildEnvelope(doc, "asset.health", asset, source);
 
     JsonObject data = doc["data"].to<JsonObject>();
-    data["health_index"] = 0.8;
-    data["severity"] = severityToString(detection.severity);
-
-    char failure_mode[64];
-    snprintf(failure_mode, sizeof(failure_mode), "threshold_%s", detection.measurement_type);
-    data["failure_mode"] = failure_mode;
-
-    char action[128];
-    if (detection.threshold_high) {
-        snprintf(action, sizeof(action), "%s %.1f %s exceeds high threshold",
-                 detection.measurement_type, detection.value, detection.unit);
-    } else {
-        snprintf(action, sizeof(action), "%s %.1f %s below low threshold",
-                 detection.measurement_type, detection.value, detection.unit);
-    }
-    data["recommended_action"] = action;
+    data["health_index"] = health_index;
+    data["severity"] = severityToString(severity);
+    // Omitted rather than invented. The previous implementation synthesized a
+    // failure mode from the measurement name and wrote its own prose.
+    if (failure_mode && *failure_mode)             data["failure_mode"] = failure_mode;
+    if (recommended_action && *recommended_action) data["recommended_action"] = recommended_action;
 
     char hash[17];
-    computeContentHash(data, hash, sizeof(hash));
+    if (!computeContentHash(data.operator JsonObjectConst(), hash, sizeof(hash))) return false;
     doc["content_hash"] = hash;
-
     return true;
 }
 
-// ─── UUID Generation (fixed: correct 32 hex digits) ─────────
+// ─── Canonical form and content hash ─────────────────────────
+
+size_t IaesEvent::canonicalize(JsonObjectConst data, char* out, size_t len) {
+    return iaes::canonicalize(data, out, len);
+}
+
+bool IaesEvent::computeContentHash(JsonObjectConst data, char* out, size_t len) {
+    if (len < 17) return false;
+    char canonical[512];
+    // Refuses rather than truncates: a truncated canonical form gives two
+    // different payloads the same digest, which defeats the only thing the
+    // hash is for.
+    if (iaes::canonicalize(data, canonical, sizeof(canonical)) == 0) return false;
+    IaesHash::contentHash(canonical, out, len);
+    return true;
+}
+
+// ─── Identifiers and time ────────────────────────────────────
 
 void IaesEvent::seedRandom() {
     if (!_seeded) {
@@ -192,31 +204,4 @@ void IaesEvent::getTimestamp(char* buffer, size_t len) {
         unsigned long ms = millis();
         snprintf(buffer, len, "T+%lu.%03lu", ms / 1000, ms % 1000);
     }
-}
-
-// ─── Content Hash ────────────────────────────────────────────
-
-void IaesEvent::computeContentHash(const JsonObject& data,
-                                    char* hash_buffer, size_t len) {
-    if (len < 17) return;
-
-    // FNV-1a 64-bit hash — fast, no heap allocation
-    char json_buf[384];
-    size_t json_len = serializeJson(data, json_buf, sizeof(json_buf));
-
-    // If serialization was truncated, hash what we have (still unique enough)
-    if (json_len > sizeof(json_buf)) json_len = sizeof(json_buf);
-
-    uint64_t hash = 14695981039346656037ULL;
-    for (size_t i = 0; i < json_len; i++) {
-        hash ^= (uint8_t)json_buf[i];
-        hash *= 1099511628211ULL;
-    }
-
-    const char hex[] = "0123456789abcdef";
-    for (int i = 15; i >= 0; i--) {
-        hash_buffer[i] = hex[hash & 0xF];
-        hash >>= 4;
-    }
-    hash_buffer[16] = '\0';
 }
