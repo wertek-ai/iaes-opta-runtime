@@ -9,6 +9,7 @@
  *   - THD Voltage > 5%    → health event (CdR maximum)
  *
  * Hardware: Arduino Opta (Ethernet + RS485)
+ * SPDX-License-Identifier: MIT
  */
 
 #include <OptaRuntime.h>

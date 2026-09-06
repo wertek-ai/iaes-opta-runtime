@@ -7,6 +7,7 @@
  *   - Compressor controller (address 3)
  *
  * Hardware: Arduino Opta (Ethernet + RS485)
+ * SPDX-License-Identifier: MIT
  */
 
 #include <OptaRuntime.h>

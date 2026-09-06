@@ -19,6 +19,8 @@ reviewer would reliably catch:
 Stdlib only, so it runs before any toolchain does.
 """
 
+# SPDX-License-Identifier: MIT
+
 import json
 import sys
 from pathlib import Path

@@ -15,6 +15,8 @@ TCP and real MQTT, and the number that comes out the far end is compared with
 the number the slave served, so a byte-order or scaling defect fails here.
 """
 
+# SPDX-License-Identifier: MIT
+
 from __future__ import annotations
 
 import json

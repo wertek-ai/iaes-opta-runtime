@@ -40,6 +40,8 @@ Two gaps, named rather than papered over:
     before publishing, from the private side.
 """
 
+# SPDX-License-Identifier: MIT
+
 import argparse
 import json
 import re

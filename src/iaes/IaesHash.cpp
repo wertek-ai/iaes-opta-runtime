@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "IaesHash.h"
 #include <string.h>
 
