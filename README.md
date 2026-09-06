@@ -1,13 +1,36 @@
 # iaes-opta-runtime
 
-IAES Edge Injector for Arduino Opta -- translates raw Modbus registers into semantic IAES v1.4 events.
+**Reference runtime for IAES 1.4 on Arduino Opta / Modbus.** It reads Modbus
+registers from industrial equipment and publishes them as IAES events.
+
+This repository *implements* the standard; it does not define it. The
+specification, its schemas and its DOI live in
+[wertek-ai/iaes](https://github.com/wertek-ai/iaes). Nothing here is normative.
+
+## What is exercised, and what is not
+
+Stated up front, because a reference implementation is copied on trust and the
+reader deserves to know which parts have been demonstrated:
+
+| | |
+|---|---|
+| `asset.measurement` | **exercised end to end** by the automated gate: a Modbus slave, this runtime, MQTT, and the specification's own validator |
+| `asset.health` | **illustrative.** The examples in this README are not exercised by the gate |
+| firmware examples | **compiled in CI.** Execution on physical Opta hardware is not part of CI |
+
+See [Trying it without an Opta](#trying-it-without-an-opta) to run the gate
+yourself.
 
 ## What it does
 
-- Reads Modbus RTU/TCP devices (VFDs, energy meters, compressors, capacitor banks)
+- Reads Modbus RTU and Modbus TCP devices (VFDs, energy meters, compressors,
+  capacitor banks)
 - Detects meaningful changes using deadband and threshold logic
-- Publishes IAES events via MQTT or HTTPS
+- Publishes IAES events over MQTT, in plaintext -- see
+  [Transport security](#transport-security)
 - Fully non-blocking -- no `delay()` calls, uses `millis()`-based state machine
+- Refuses to start without an absolute clock, and refuses to emit an event that
+  would not conform
 
 ## Supported Hardware
 
