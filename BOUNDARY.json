@@ -1,11 +1,11 @@
 {
-  "$comment": "What in this repository is the standard, what is this product, and what is neither. Checked by tools/check_boundary.py: a directory that holds source and is not classified here fails CI, so the question gets answered when the code is written and the answer is cheap.",
+  "$comment": "What in this repository implements the standard, what is this product, and what is neither. Nothing here is normative: the specification lives in wertek-ai/iaes. Checked by tools/check_boundary.py: a directory that holds source and is not classified here fails CI, so the question gets answered when the code is written and the answer is cheap.",
   "iaes_spec_version": "1.4",
 
   "directories": {
     "src/iaes": {
-      "class": "standard",
-      "why": "Expresses an IAES event and nothing else: the published vocabulary, asset identity, the envelope, the canonical form and the specification's content hash. A competitor implementing IAES needs to ask us nothing to use it.",
+      "class": "standard_implementation",
+      "why": "The IAES implementation layer. Expresses an IAES event and nothing else: the published vocabulary, asset identity, the envelope, the canonical form and the specification's content hash. A competitor implementing IAES needs to ask us nothing to use it.",
       "may_include": ["src/iaes"]
     },
     "src": {
@@ -30,5 +30,5 @@
     }
   },
 
-  "the_rule": "Nothing under a directory classed 'standard' may include a file from outside it. That is the whole boundary in one sentence, and it is the one that broke: until 2026-09-06 IaesEvent.h included IaesDetector.h, so producing a standard event required running this product's judgment first."
+  "the_rule": "Nothing under a directory classed 'standard_implementation' may include a file from outside it. That is the whole boundary in one sentence, and it is the one that broke: until 2026-09-06 IaesEvent.h included IaesDetector.h, so producing a standard event required running this product's judgment first."
 }

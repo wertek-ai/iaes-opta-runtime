@@ -1,8 +1,8 @@
 /**
  * iaes — Vocabulary and asset identity
  *
- * The part of this runtime that belongs to the standard rather than to the
- * product: the severity levels IAES publishes, and the fields an event needs
+ * The part of this runtime that implements IAES rather than this product's
+ * judgment: the severity levels IAES publishes, and the fields an event needs
  * to say which asset it is about.
  *
  * Nothing here knows what a Modbus register is, what a deadband is, or when a

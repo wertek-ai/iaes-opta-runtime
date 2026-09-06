@@ -217,12 +217,12 @@ Topic format: `{prefix}/{source}/{event_type}` (e.g. `iaes/opta.plant1.mcc3/asse
 
 This repository holds two different things, and [`BOUNDARY.json`](BOUNDARY.json)
 says which is which. CI fails if a directory that holds source is not
-classified, and fails if anything on the standard side includes a file from
-outside it.
+classified, and fails if anything in the IAES implementation layer includes a
+file from outside it.
 
 | | |
 |---|---|
-| `src/iaes/` | **the standard.** Expressing an IAES event: the published vocabulary, asset identity, the envelope, the canonical form, the content hash. Implementable without asking us anything. |
+| `src/iaes/` | **the IAES implementation layer.** Expressing an IAES event: the published vocabulary, asset identity, the envelope, the canonical form, the content hash. Implementable without asking us anything. |
 | `src/`, `profiles/`, `examples/` | **this product.** Deadbands, thresholds, when a reading deserves a severity, and how to talk to a device. `profiles/` is an equipment catalog, which IAES governance excludes by name. |
 | `tools/`, `test/` | neither. |
 
@@ -235,7 +235,7 @@ Two things were wrong until 2026-09-06, and both looked ordinary:
   are the caller's now, and a threshold crossing no longer claims to be a fault
   classification.
 
-The classes that are not the standard no longer carry its name: `IaesRuntime`,
+The classes that do not implement the standard no longer carry its name: `IaesRuntime`,
 `IaesDetector`, `IaesModbus`, `IaesMqtt` and `IaesConfig` became `Opta*`.
 
 ## Configuration

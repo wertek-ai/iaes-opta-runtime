@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Every directory says which side of the boundary it is on, and the standard
-side may not reach across.
+"""Every directory says which side of the boundary it is on, and the IAES
+implementation layer may not reach across.
 
 Two questions, both of which this repository got wrong and neither of which a
 reviewer would reliably catch:
 
-  1. Is this directory the standard, the product, or neither? An unclassified
+  1. Does this directory implement IAES, belong to the product, or neither?
+     An unclassified
      directory fails, so the question gets answered when the code is written --
      which is when the answer is cheap and obvious. Asked later, it is neither.
 
-  2. Does anything on the standard side depend on something outside it? Until
+  2. Does anything in the implementation layer depend on something outside it?
+     Until
      2026-09-06 `IaesEvent.h` included `IaesDetector.h`, so building an IAES
      event required running this product's judgment first. The include looked
      ordinary. Nothing but a check like this notices.
@@ -30,7 +32,7 @@ def load():
     path = ROOT / "BOUNDARY.json"
     if not path.exists():
         print("error: BOUNDARY.json is missing. Every IAES repository declares "
-              "which of its directories are the standard.", file=sys.stderr)
+              "which of its directories implement it.", file=sys.stderr)
         raise SystemExit(1)
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -77,11 +79,11 @@ def main() -> None:
         if owning_entry(d, declared) is None:
             errors.append(
                 f"{d}/ holds source and is not classified in BOUNDARY.json. "
-                f"Say whether it is standard, product or neutral.")
+                f"Say whether it is standard_implementation, product or neutral.")
 
     # 2. The standard side reaches nothing outside itself.
     for name, entry in declared.items():
-        if entry.get("class") != "standard":
+        if entry.get("class") != "standard_implementation":
             continue
         allowed = entry.get("may_include", [name])
         base = ROOT / name
@@ -99,8 +101,8 @@ def main() -> None:
                 if not any(rel == a or rel.startswith(a + "/") for a in allowed):
                     errors.append(
                         f"{path.relative_to(ROOT).as_posix()}:{n} includes "
-                        f"\"{target}\", which is outside the standard. "
-                        f"The standard must not depend on the product.")
+                        f"\"{target}\", which is outside the implementation layer. "
+                        f"What implements the standard must not depend on the product.")
 
     if errors:
         for e in errors:
@@ -112,8 +114,8 @@ def main() -> None:
     for entry in declared.values():
         counts[entry["class"]] = counts.get(entry["class"], 0) + 1
     summary = ", ".join(f"{v} {k}" for k, v in sorted(counts.items()))
-    print(f"every source directory is classified ({summary}), and the standard "
-          f"side includes nothing outside itself")
+    print(f"every source directory is classified ({summary}), and the IAES "
+          f"implementation layer includes nothing outside itself")
 
 
 if __name__ == "__main__":
